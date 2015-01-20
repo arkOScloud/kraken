@@ -4,7 +4,8 @@ from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
 from arkos.system import filesystems
-from kraken.messages import Message
+from kraken.messages import Message, update_model
+from kraken.utilities import as_job, job_response
 
 backend = Blueprint("filesystems", __name__)
 
@@ -27,6 +28,10 @@ class DisksAPI(MethodView):
     
     def post(self):
         data = json.loads(request.body)["virtual_disk"]
+        id = as_job(_post, self, data)
+        return job_response(id)
+    
+    def _post(self, data):
         message = Message()
         message.update("info", "Creating virtual disk...")
         disk = filesystems.VirtualDisk(name=data["name"], size=data["size"])
@@ -34,7 +39,7 @@ class DisksAPI(MethodView):
             disk.create()
         except Exception, e:
             message.complete("error", "Virtual disk could not be created: %s" % str(e))
-            abort(500)
+            raise
         if data["encrypt"]:
             try:
                 message.update("info", "Encrypting virtual disk...")
@@ -42,8 +47,8 @@ class DisksAPI(MethodView):
             except Exception, e:
                 disk.remove()
                 message.complete("error", "Virtual disk could not be encrypted: %s" % str(e))
-                abort(500)
-        return jsonify(virtual_disk=disk)
+                raise
+        update_model("virtual_disk", disk.as_dict())
     
     def put(self, id):
         data = json.loads(request.body)

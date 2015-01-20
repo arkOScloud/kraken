@@ -6,6 +6,7 @@ from flask.views import MethodView
 
 from arkos import backup
 from kraken.messages import Message
+from kraken.utilities import as_job, job_response
 
 backend = Blueprint("backup", __name__)
 
@@ -24,14 +25,22 @@ class BackupsAPI(MethodView):
         return jsonify(backups=backups)
     
     def post(self, id):
+        id = as_job(_post, self, id)
+        return job_response(id)
+    
+    def _post(self, id):
         backup.create(id)
     
     def put(self, id, time):
         backups = backup.get()
         if id in backups and time in backups[id]:
-            backup.restore(backups[id][time])
+            id = as_job(_put, self, backups[id][time])
+            return job_response(id)
         else:
             abort(404)
+    
+    def _put(self, backup):
+        backup.restore(backup)
     
     def delete(self, id, time):
         backup.delete(id, time)

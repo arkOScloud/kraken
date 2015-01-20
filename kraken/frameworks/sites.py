@@ -4,7 +4,8 @@ from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
 from arkos import applications, websites, certificates
-from kraken.messages import Message
+from kraken.messages import Message, update_model
+from kraken.utilities import as_job, job_response
 
 backend = Blueprint("websites", __name__)
 
@@ -23,6 +24,10 @@ class WebsitesAPI(MethodView):
     
     def post(self):
         data = json.loads(request.body)["website"]
+        id = as_job(_post, data)
+        return job_response(id)
+    
+    def _post(self, data):
         message = Message()
         site = applications.get(data["type"]).modules["website"]
         site = site(data["id"], data["name"], data["addr"], data["port"])
@@ -31,10 +36,10 @@ class WebsitesAPI(MethodView):
             message.complete("success", "%s site installed successfully" % site.meta.name)
             if specialmsg:
                 Message("info", specialmsg)
-            return jsonify(website=site.as_dict())
+            update_model("website", site.as_dict())
         except Exception, e:
             message.complete("error", "%s could not be installed: %s" % (site.name, str(e)))
-            abort(500)
+            raise
     
     def put(self, id):
         data = json.loads(request.body)["website"]
@@ -63,17 +68,20 @@ class WebsitesAPI(MethodView):
         return jsonify(website=site.as_dict())
     
     def delete(self, id):
+        id = as_job(_delete, id, success_code=204)
+        return job_response(id)
+    
+    def _delete(self, id):
         message = Message()
         site = websites.get(id)
         try:
             site.remove(message)
             site.installed = False
             message.complete("success", "%s site removed successfully" % site.meta.name)
-            return Response(status=201)
         except Exception, e:
             site.installed = True
             message.complete("error", "%s could not be removed: %s" % (site.name, str(e)))
-            abort(500)
+            raise
 
 
 sites_view = WebsitesAPI.as_view('sites_api')

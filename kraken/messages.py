@@ -1,11 +1,10 @@
 import json
 
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, abort
 from arkos.utilities import random_string
+from redis_storage import storage
 
 backend = Blueprint("messages", __name__)
-backend.messages = []
-backend.updates = []
 
 
 class Message:
@@ -16,28 +15,42 @@ class Message:
         else:
             data = {"id": self.id, "class": "info", "message": "Please wait...", 
                 "complete": False}
-        backend.messages.append(data)
+        storage.append("messages", data)
     
     def update(self, cls, msg):
         data = {"id": self.id, "class": cls, "message": msg, "complete": False}
-        backend.messages.append(data)
+        storage.append(data)
     
     def complete(self, cls, msg):
         data = {"id": self.id, "class": cls, "message": msg, "complete": True}
-        backend.messages.append(data)
+        storage.append(data)
 
 
 @backend.route('/messages/')
-def get_messages(data):
-    msg = jsonify(messages=backend.messages)
-    backend.messages = []
-    return msg
+def get_messages():
+    messages = storage.get_list("messages")
+    storage.delete("messages")
+    return jsonify(messages=messages)
 
 @backend.route('/record_updates/')
-def get_updates(data):
-    upd = jsonify(updates=backend.updates)
-    backend.updates = []
-    return upd
+def get_updates():
+    updates = storage.get_list("record_updates")
+    storage.delete("record_updates")
+    return jsonify(record_updates=updates)
+
+@backend.route('/job/')
+def get_jobs():
+    jobs = []
+    for x in storage.scan("job"):
+        jobs.append("/job/%s" % x.split("arkos:job")[1])
+    return jsonify(jobs=jobs)
+
+@backend.route('/job/<string:id>/')
+def get_job(id):
+    job = storage.get_all("job:%s" % id)
+    if not job:
+        abort(404)
+    return Response(status=job["status"])
 
 def update_model(name, model):
-    backend.updates.append({name: model})
+    storage.append("record_updates", {name: model})

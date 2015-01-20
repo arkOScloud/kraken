@@ -5,7 +5,8 @@ from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
 from arkos import certificates
-from kraken.messages import Message
+from kraken.messages import Message, update_model
+from kraken.utilities import as_job, job_response
 
 backend = Blueprint("certs", __name__)
 
@@ -25,6 +26,16 @@ class CertificatesAPI(MethodView):
     def post(self):
         data = json.loads(request.body)["certificate"]
         if data["operation"] == "generate":
+            id = as_job(_post, self, data)
+            return job_response(id)
+        elif data["operation"] == "upload":
+            id = as_job(_post, self, data)
+            return job_response(id)
+        else:
+            abort(400)
+    
+    def _post(self, data):
+        if data["operation"] == "generate":
             message = Message()
             message.update("info", "Generating certificate...")
             try:
@@ -32,22 +43,20 @@ class CertificatesAPI(MethodView):
                     data["country"], data["state"], data["locale"], data["email"], 
                     data["keytype"], data["keylength"])
                 message.complete("success", "Certificate generated successfully")
-                return jsonify(certificate=cert.as_dict())
+                update_model("certificate", cert.as_dict())
             except Exception, e:
                 message.complete("error", "Certificate could not be generated: %s" % str(e))
-                abort(500)
+                raise
         elif data["operation"] == "upload":
             try:
                 cert = certificates.upload_certificate(data["id"], data["name"], 
                     base64.b64decode(data["cert"]), base64.b64decode(data["key"]), 
                     base64.b64decode(data["chain"]) if data.get("chain") else None)
                 message.complete("success", "Certificate uploaded successfully")
-                return jsonify(certificate=cert.as_dict())
+                update_model("certificate", cert.as_dict())
             except Exception, e:
                 message.complete("error", "Certificate could not be uploaded: %s" % str(e))
-                abort(500)
-        else:
-            abort(400)
+                raise
     
     def put(self, id):
         data = json.loads(request.body)["certificate"]
