@@ -3,7 +3,6 @@ import json
 from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
-from kraken.messages import Message
 from arkos.system import users, groups, domains
 
 backend = Blueprint("roles", __name__)
@@ -27,10 +26,10 @@ class UsersAPI(MethodView):
                 admin=data["admin"], sudo=data["sudo"])
             u.add(data["passwd"])
         except Exception, e:
-            Message("error", "Could not add user: %s" % str(e))
-            return Response(status=422)
-        Message("success", "User %s added successfully" % str(u.name))
-        return jsonify(user=u.as_dict())
+            resp = jsonify(message="User couldn't be added: %s" % str(e))
+            resp.status_code = 422
+            return resp
+        return jsonify(domain=u.as_dict(), message="User %s added successfully" % str(u.name))
     
     def put(self, id):
         data = json.loads(request.data)["user"]
@@ -42,16 +41,24 @@ class UsersAPI(MethodView):
         u.domain = data["domain"]
         u.admin = data["admin"]
         u.sudo = data["sudo"]
-        u.update(data.get("passwd"))
-        Message("success", "User %s updated successfully" % str(u.name))
+        try:
+            u.update(data.get("passwd"))
+        except Exception, e:
+            resp = jsonify(message="User couldn't be updated: %s" % str(e))
+            resp.status_code = 422
+            return resp
         return jsonify(user=u.as_dict())
     
     def delete(self, id):
         u = users.get(id)
         if not u:
             abort(404)
-        u.delete()
-        Message("success", "User %s deleted successfully" % str(u.name))
+        try:
+            u.delete()
+        except Exception, e:
+            resp = jsonify(message="User couldn't be deleted: %s" % str(e))
+            resp.status_code = 422
+            return resp
         return Response(status=204)
 
 
@@ -68,9 +75,13 @@ class GroupsAPI(MethodView):
     def post(self):
         data = json.loads(request.data)["group"]
         g = groups.Group(name=data["name"], users=data["users"])
-        g.add()
-        Message("success", "Group %s added successfully" % str(g.name))
-        return jsonify(group=g.as_dict())
+        try:
+            g.add()
+        except Exception, e:
+            resp = jsonify(message="Group couldn't be added: %s" % str(e))
+            resp.status_code = 422
+            return resp
+        return jsonify(domain=g.as_dict(), message="Group %s added successfully" % str(g.name))
     
     def put(self, id):
         data = json.loads(request.data)["group"]
@@ -78,16 +89,24 @@ class GroupsAPI(MethodView):
         if not g:
             abort(404)
         g.users = [str(u) for u in data["users"]]
-        g.update()
-        Message("success", "Group %s updated successfully" % str(g.name))
+        try:
+            g.update()
+        except Exception, e:
+            resp = jsonify(message="Group couldn't be updated: %s" % str(e))
+            resp.status_code = 422
+            return resp
         return jsonify(group=g.as_dict())
     
     def delete(self, id):
         g = groups.get(id)
         if not g:
             abort(404)
-        g.delete()
-        Message("success", "Group %s deleted successfully" % str(g.name))
+        try:
+            g.delete()
+        except Exception, e:
+            resp = jsonify(message="Group couldn't be deleted: %s" % str(e))
+            resp.status_code = 422
+            return resp
         return Response(status=204)
 
 
@@ -104,16 +123,24 @@ class DomainsAPI(MethodView):
     def post(self):
         data = json.loads(request.data)["domain"]
         d = domains.Domain(name=data["id"])
-        d.add()
-        Message("success", "Domain %s added successfully" % str(d.name))
-        return jsonify(domain=d.as_dict())
+        try:
+            d.add()
+        except Exception, e:
+            resp = jsonify(message="Domain couldn't be added: %s" % str(e))
+            resp.status_code = 422
+            return resp
+        return jsonify(domain=d.as_dict(), message="Domain %s added successfully" % str(d.name))
     
     def delete(self, id):
         d = domains.get(id)
         if not d:
             abort(404)
-        d.remove()
-        Message("success", "Domain %s deleted successfully" % str(d.name))
+        try:
+            d.remove()
+        except Exception, e:
+            resp = jsonify(message="Domain couldn't be deleted: %s" % str(e))
+            resp.status_code = 422
+            return resp
         return Response(status=204)
 
 
