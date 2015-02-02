@@ -6,7 +6,7 @@ from arkos.utilities.logs import ConsoleHandler
 from arkos.utilities import *
 from kraken.framework import register_frameworks
 
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from werkzeug.exceptions import default_exceptions, HTTPException
 
 
@@ -64,3 +64,16 @@ def make_json_error(err):
 
 
 app = Flask(__name__)
+
+@app.after_request
+def add_cors(resp):
+    """ Ensure all responses have the CORS headers. This ensures any failures are also accessible
+        by the client. """
+    resp.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin','*')
+    resp.headers['Access-Control-Allow-Credentials'] = 'true'
+    resp.headers['Access-Control-Allow-Methods'] = 'PUT, POST, OPTIONS, GET, DELETE'
+    resp.headers['Access-Control-Allow-Headers'] = 'Origin, X-Requested-With, Accept, DNT, Cache-Control, Accept-Encoding, Content-Type'
+    # set low for debugging
+    if app.debug:
+        resp.headers['Access-Control-Max-Age'] = '1'
+    return resp

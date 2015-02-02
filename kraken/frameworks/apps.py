@@ -18,9 +18,9 @@ class ApplicationsAPI(MethodView):
         if id and not apps:
             abort(404)
         if type(apps) == list:
-            return jsonify(applications=[x.as_dict() for x in apps])
+            return jsonify(apps=[x.as_dict() for x in apps])
         else:
-            return jsonify(application=apps.as_dict())
+            return jsonify(app=apps.as_dict())
     
     def post(self):
         data = json.loads(request.body)["available_app"]

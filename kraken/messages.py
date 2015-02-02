@@ -26,26 +26,26 @@ class Message:
         storage.append(data)
 
 
-@backend.route('/messages/')
+@backend.route('/messages')
 def get_messages():
     messages = storage.get_list("messages")
     storage.delete("messages")
     return jsonify(messages=messages)
 
-@backend.route('/record_updates/')
+@backend.route('/record_updates')
 def get_updates():
     updates = storage.get_list("record_updates")
     storage.delete("record_updates")
     return jsonify(record_updates=updates)
 
-@backend.route('/job/')
+@backend.route('/job')
 def get_jobs():
     jobs = []
     for x in storage.scan("job"):
         jobs.append("/job/%s" % x.split("arkos:job")[1])
     return jsonify(jobs=jobs)
 
-@backend.route('/job/<string:id>/')
+@backend.route('/job/<string:id>')
 def get_job(id):
     job = storage.get_all("job:%s" % id)
     if not job:
