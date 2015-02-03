@@ -47,7 +47,7 @@ class UsersAPI(MethodView):
             resp = jsonify(message="User couldn't be updated: %s" % str(e))
             resp.status_code = 422
             return resp
-        return jsonify(user=u.as_dict())
+        return jsonify(user=u.as_dict(), message="User %s updated successfully" % u.name)
     
     def delete(self, id):
         u = users.get(id)
@@ -95,7 +95,7 @@ class GroupsAPI(MethodView):
             resp = jsonify(message="Group couldn't be updated: %s" % str(e))
             resp.status_code = 422
             return resp
-        return jsonify(group=g.as_dict())
+        return jsonify(group=g.as_dict(), message="Group %s updated successfully" % g.name)
     
     def delete(self, id):
         g = groups.get(id)
@@ -113,7 +113,7 @@ class GroupsAPI(MethodView):
 class DomainsAPI(MethodView):
     def get(self, id):
         d = domains.get(id)
-        if not d:
+        if id and not d:
             abort(404)
         if type(d) == list:
             return jsonify(domains=[x.as_dict() for x in d])

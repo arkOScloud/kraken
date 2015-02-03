@@ -32,7 +32,12 @@ def get_messages():
     updates = storage.get_list("record_updates")
     storage.delete("messages")
     storage.delete("record_updates")
-    return jsonify(messages=messages, models=updates)
+    models = {}
+    for x in updates:
+        if not models.has_key(x["name"]):
+            models[x["name"]] = []
+        models[x["name"]].append(x["model"])
+    return jsonify(messages=messages, models=models)
 
 @backend.route('/job')
 def get_jobs():
@@ -49,4 +54,4 @@ def get_job(id):
     return Response(status=job["status"])
 
 def update_model(name, model):
-    storage.append("record_updates", {name: model})
+    storage.append("record_updates", {"name": name, "model": model})

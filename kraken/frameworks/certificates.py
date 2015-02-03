@@ -43,7 +43,7 @@ class CertificatesAPI(MethodView):
                     data["country"], data["state"], data["locale"], data["email"], 
                     data["keytype"], data["keylength"])
                 message.complete("success", "Certificate generated successfully")
-                update_model("cert", cert.as_dict())
+                update_model("certs", cert.as_dict())
             except Exception, e:
                 message.complete("error", "Certificate could not be generated: %s" % str(e))
                 raise
@@ -53,13 +53,13 @@ class CertificatesAPI(MethodView):
                     base64.b64decode(data["cert"]), base64.b64decode(data["key"]), 
                     base64.b64decode(data["chain"]) if data.get("chain") else None)
                 message.complete("success", "Certificate uploaded successfully")
-                update_model("cert", cert.as_dict())
+                update_model("certs", cert.as_dict())
             except Exception, e:
                 message.complete("error", "Certificate could not be uploaded: %s" % str(e))
                 raise
     
     def put(self, id):
-        data = json.loads(request.data)["certificate"]
+        data = json.loads(request.data)["cert"]
         cert = certificates.get(id)
         if not id or not cert:
             abort(404)
@@ -89,12 +89,12 @@ class CertificateAuthoritiesAPI(MethodView):
         if id and request.args.get("download", None):
             with open(certs.cert_path, "r") as f:
                 certfile = base64.b64encode(f.read())
-            return jsonify(certificate_authority={"name": "%s.crt"%certs.name, 
+            return jsonify(certauth={"name": "%s.crt"%certs.name, 
                 "cert": certfile})
         if type(certs) == list:
-            return jsonify(certificate_authorities=[x.as_dict() for x in certs])
+            return jsonify(certauths=[x.as_dict() for x in certs])
         else:
-            return jsonify(certificate_authority=certs.as_dict())
+            return jsonify(certauth=certs.as_dict())
     
     def delete(self, id):
         cert = certificates.get_authorities(id)
@@ -105,14 +105,14 @@ class CertificateAuthoritiesAPI(MethodView):
 
 
 certs_view = CertificatesAPI.as_view('certs_api')
-backend.add_url_rule('/certs/', defaults={'id': None}, 
+backend.add_url_rule('/certs', defaults={'id': None}, 
     view_func=certs_view, methods=['GET',])
-backend.add_url_rule('/certs/', view_func=certs_view, methods=['POST',])
-backend.add_url_rule('/certs/<int:id>', view_func=certs_view, 
+backend.add_url_rule('/certs', view_func=certs_view, methods=['POST',])
+backend.add_url_rule('/certs/<string:id>', view_func=certs_view, 
     methods=['GET', 'PUT', 'DELETE'])
 
 certauth_view = CertificateAuthoritiesAPI.as_view('cert_auths_api')
-backend.add_url_rule('/cert_auths/', defaults={'id': None}, 
+backend.add_url_rule('/certauths', defaults={'id': None}, 
     view_func=certauth_view, methods=['GET',])
-backend.add_url_rule('/cert_auths/<int:id>', view_func=certauth_view, 
+backend.add_url_rule('/certauths/<string:id>', view_func=certauth_view, 
     methods=['GET', 'DELETE'])
