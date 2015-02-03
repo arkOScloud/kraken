@@ -19,17 +19,17 @@ class CertificatesAPI(MethodView):
         if id and not certs:
             abort(404)
         if type(certs) == list:
-            return jsonify(certificates=[x.as_dict() for x in certs])
+            return jsonify(certs=[x.as_dict() for x in certs])
         else:
-            return jsonify(certificate=certs.as_dict())
+            return jsonify(cert=certs.as_dict())
     
     def post(self):
-        data = json.loads(request.body)["certificate"]
+        data = json.loads(request.data)["cert"]
         if data["operation"] == "generate":
-            id = as_job(_post, self, data)
-            return job_response(id)
+            id = as_job(self._post, data)
+            return job_response(id, data={"cert": {"id": data["id"]}})
         elif data["operation"] == "upload":
-            id = as_job(_post, self, data)
+            id = as_job(self._post, data)
             return job_response(id)
         else:
             abort(400)
@@ -39,27 +39,27 @@ class CertificatesAPI(MethodView):
             message = Message()
             message.update("info", "Generating certificate...")
             try:
-                cert = certificates.generate_certificate(data["id"], data["name"], data["domain"], 
+                cert = certificates.generate_certificate(data["id"], data["domain"], 
                     data["country"], data["state"], data["locale"], data["email"], 
                     data["keytype"], data["keylength"])
                 message.complete("success", "Certificate generated successfully")
-                update_model("certificate", cert.as_dict())
+                update_model("cert", cert.as_dict())
             except Exception, e:
                 message.complete("error", "Certificate could not be generated: %s" % str(e))
                 raise
         elif data["operation"] == "upload":
             try:
-                cert = certificates.upload_certificate(data["id"], data["name"], 
+                cert = certificates.upload_certificate(data["id"],  
                     base64.b64decode(data["cert"]), base64.b64decode(data["key"]), 
                     base64.b64decode(data["chain"]) if data.get("chain") else None)
                 message.complete("success", "Certificate uploaded successfully")
-                update_model("certificate", cert.as_dict())
+                update_model("cert", cert.as_dict())
             except Exception, e:
                 message.complete("error", "Certificate could not be uploaded: %s" % str(e))
                 raise
     
     def put(self, id):
-        data = json.loads(request.body)["certificate"]
+        data = json.loads(request.data)["certificate"]
         cert = certificates.get(id)
         if not id or not cert:
             abort(404)

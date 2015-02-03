@@ -1,6 +1,7 @@
 import threading
+import traceback
 
-from flask import Response
+from flask import Response, jsonify
 
 from kraken.application import app
 from redis_storage import storage
@@ -27,9 +28,10 @@ class Job(threading.Thread):
         except Exception, e:
             app.logger.error("Job %s (%s) has run into exception %s: %s"%(self._id,
                 self._func.__name__, e.__class__.__name__, str(e)))
+            app.logger.error("Stacktrace is as follows:\n%s" % traceback.format_exc())
             storage.set("job:%s" % self._id, {"status": 500})
         finally:
-            storage.set("job:%s" % self._id, {"status": self_success_code})
+            storage.set("job:%s" % self._id, {"status": self._success_code})
         storage.expire("job:%s" % self._id, 43200)
 
 
@@ -39,7 +41,12 @@ def as_job(func, *args, **kwargs):
     j.start()
     return id
 
-def job_response(id):
+def job_response(id, data=None):
+    if data:
+        response = jsonify(**data)
+        response.headers.add("Location", "/jobs/%s" % id)
+        response.status_code = 202
+        return response
     response = Response(status=202)
     response.headers.add("Location", "/jobs/%s" % id)
     return response

@@ -19,24 +19,20 @@ class Message:
     
     def update(self, cls, msg):
         data = {"id": self.id, "class": cls, "message": msg, "complete": False}
-        storage.append(data)
+        storage.append("messages", data)
     
     def complete(self, cls, msg):
         data = {"id": self.id, "class": cls, "message": msg, "complete": True}
-        storage.append(data)
+        storage.append("messages", data)
 
 
 @backend.route('/messages')
 def get_messages():
     messages = storage.get_list("messages")
-    storage.delete("messages")
-    return jsonify(messages=messages)
-
-@backend.route('/record_updates')
-def get_updates():
     updates = storage.get_list("record_updates")
+    storage.delete("messages")
     storage.delete("record_updates")
-    return jsonify(record_updates=updates)
+    return jsonify(messages=messages, models=updates)
 
 @backend.route('/job')
 def get_jobs():
