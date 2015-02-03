@@ -29,7 +29,7 @@ class UsersAPI(MethodView):
             resp = jsonify(message="User couldn't be added: %s" % str(e))
             resp.status_code = 422
             return resp
-        return jsonify(domain=u.as_dict(), message="User %s added successfully" % str(u.name))
+        return jsonify(user=u.as_dict(), message="User %s added successfully" % str(u.name))
     
     def put(self, id):
         data = json.loads(request.data)["user"]
@@ -81,7 +81,7 @@ class GroupsAPI(MethodView):
             resp = jsonify(message="Group couldn't be added: %s" % str(e))
             resp.status_code = 422
             return resp
-        return jsonify(domain=g.as_dict(), message="Group %s added successfully" % str(g.name))
+        return jsonify(group=g.as_dict(), message="Group %s added successfully" % str(g.name))
     
     def put(self, id):
         data = json.loads(request.data)["group"]
@@ -142,15 +142,6 @@ class DomainsAPI(MethodView):
             resp.status_code = 422
             return resp
         return Response(status=204)
-
-
-@backend.route('/system/users/nextid')
-def get_next_uid():
-    return jsonify(uid=users.get_next_uid())
-
-@backend.route('/system/groups/nextid')
-def get_next_gid():
-    return jsonify(gid=groups.get_next_gid())
 
 
 users_view = UsersAPI.as_view('users_api')
