@@ -1,4 +1,4 @@
-import base64
+import copy
 import json
 
 from flask import Response, Blueprint, abort, jsonify, request
@@ -24,39 +24,42 @@ class CertificatesAPI(MethodView):
             return jsonify(cert=certs.as_dict())
     
     def post(self):
-        data = json.loads(request.data)["cert"]
-        if data["operation"] == "generate":
-            id = as_job(self._post, data)
+        if request.headers.get('Content-Type').startswith("application/json"):
+            data = json.loads(request.data)["cert"]
+            id = as_job(self._generate, data)
             return job_response(id, data={"cert": {"id": data["id"]}})
-        elif data["operation"] == "upload":
-            id = as_job(self._post, data)
+        elif request.headers.get('Content-Type').startswith("multipart/form-data"):
+            name = request.form.get("id")
+            files = [request.files.get("cert").read(), request.files.get("key").read(),
+                request.files.get("chain").read() if request.files.get("chain") else None]
+            id = as_job(self._upload, name, files)
             return job_response(id)
         else:
             abort(400)
     
-    def _post(self, data):
-        if data["operation"] == "generate":
-            message = Message()
-            message.update("info", "Generating certificate...")
-            try:
-                cert = certificates.generate_certificate(data["id"], data["domain"], 
-                    data["country"], data["state"], data["locale"], data["email"], 
-                    data["keytype"], data["keylength"])
-                message.complete("success", "Certificate generated successfully")
-                update_model("certs", cert.as_dict())
-            except Exception, e:
-                message.complete("error", "Certificate could not be generated: %s" % str(e))
-                raise
-        elif data["operation"] == "upload":
-            try:
-                cert = certificates.upload_certificate(data["id"],  
-                    base64.b64decode(data["cert"]), base64.b64decode(data["key"]), 
-                    base64.b64decode(data["chain"]) if data.get("chain") else None)
-                message.complete("success", "Certificate uploaded successfully")
-                update_model("certs", cert.as_dict())
-            except Exception, e:
-                message.complete("error", "Certificate could not be uploaded: %s" % str(e))
-                raise
+    def _generate(self, data):
+        message = Message()
+        message.update("info", "Generating certificate...")
+        try:
+            cert = certificates.generate_certificate(data["id"], data["domain"], 
+                data["country"], data["state"], data["locale"], data["email"], 
+                data["keytype"], data["keylength"])
+            message.complete("success", "Certificate generated successfully")
+            update_model("certs", cert.as_dict())
+        except Exception, e:
+            message.complete("error", "Certificate could not be generated: %s" % str(e))
+            raise
+    
+    def _upload(self, name, files):
+        message = Message()
+        message.update("info", "Uploading certificate...")
+        try:
+            cert = certificates.upload_certificate(name, files[0], files[1], files[2])
+            message.complete("success", "Certificate uploaded successfully")
+            update_model("certs", cert.as_dict())
+        except Exception, e:
+            message.complete("error", "Certificate could not be uploaded: %s" % str(e))
+            raise
     
     def put(self, id):
         data = json.loads(request.data)["cert"]
