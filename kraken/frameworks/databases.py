@@ -4,8 +4,8 @@ import json
 from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
-from arkos import applications, databases
-from kraken.messages import Message
+from arkos import databases
+from kraken.messages import update_model
 
 backend = Blueprint("databases", __name__)
 
@@ -28,15 +28,14 @@ class DatabasesAPI(MethodView):
     
     def post(self):
         data = json.loads(request.data)["database"]
-        message = Message()
         manager = databases.get_managers(data["type"])
         try:
             db = manager.add_db(data["name"])
-            message.complete("success", "%s created successfully" % data["name"])
-            return jsonify(database=db.as_dict())
         except Exception, e:
-            message.complete("error", "%s could not be created: %s" % (data["name"], str(e)))
-            raise
+            resp = jsonify(message="Database couldn't be added: %s" % str(e))
+            resp.status_code = 422
+            return resp
+        return jsonify(database=db.as_dict(), message="Database %s added successfully" % str(db.name))
     
     def put(self, id):
         data = json.loads(request.data)["database"]
@@ -45,22 +44,23 @@ class DatabasesAPI(MethodView):
             abort(404)
         elif not data.get("execute"):
             abort(400)
-        else:
+        try:
             result = db.execute(data["execute"])
-            return jsonify(database={"id": db.id, "result": result})
+        except Exception, e:
+            result = str(e)
+        return jsonify(database={"id": db.id, "result": result})
     
     def delete(self, id):
-        message = Message()
         db = databases.get(id)
         if not id or not db:
             abort(404)
         try:
             db.remove()
-            message.complete("success", "%s removed successfully" % db.name)
-            return Response(status=204)
         except Exception, e:
-            message.complete("error", "%s could not be removed: %s" % (db.name, str(e)))
-            raise
+            resp = jsonify(message="Database couldn't be deleted: %s" % str(e))
+            resp.status_code = 422
+            return resp
+        return Response(status=204)
 
 
 class DatabaseUsersAPI(MethodView):
@@ -77,41 +77,37 @@ class DatabaseUsersAPI(MethodView):
     
     def post(self):
         data = json.loads(request.data)["database_user"]
-        message = Message()
-        app = applications.get(data["type"])
-        u = app.modules["database"]["user"]
-        u = u(data["id"], data["name"], app.modules["database"]["manager"])
+        manager = databases.get_managers(data["type"])
         try:
-            u.add(data["passwd"])
-            message.complete("success", "%s created successfully" % u.name)
-            return jsonify(database_user=u.as_dict())
+            u = manager.add_user(data["name"], data["passwd"])
         except Exception, e:
-            message.complete("error", "%s could not be created: %s" % (u.name, str(e)))
-            raise
+            resp = jsonify(message="Database user couldn't be added: %s" % str(e))
+            resp.status_code = 422
+            return resp
+        return jsonify(database_user=u.as_dict(), message="Database user %s added successfully" % str(u.name))
     
     def put(self, id):
         data = json.loads(request.data)["database_user"]
-        u = databases.get_user(data["id"])
+        u = databases.get_user(id)
         if not id or not u:
             abort(404)
         elif not data.get("operation"):
             abort(400)
-        else:
-            u.chperm(data["operation"], databases.get(data["database_name"]))
-            return Response(status=201)
+        u.chperm(data["operation"], databases.get(data["database"]))
+        update_model("database_users", u.as_dict())
+        return Response(status=201)
     
     def delete(self, id):
-        message = Message()
         u = databases.get_user(id)
         if not id or not u:
             abort(404)
         try:
             u.remove()
-            message.complete("success", "%s removed successfully" % u.name)
-            return Response(status=204)
         except Exception, e:
-            message.complete("error", "%s could not be removed: %s" % (u.name, str(e)))
-            raise
+            resp = jsonify(message="Database user couldn't be deleted: %s" % str(e))
+            resp.status_code = 422
+            return resp
+        return Response(status=204)
 
 
 @backend.route('/database_types')

@@ -23,16 +23,17 @@ class WebsitesAPI(MethodView):
             return jsonify(website=sites.as_dict())
     
     def post(self):
-        data = json.loads(request.body)["website"]
-        id = as_job(_post, data)
+        data = json.loads(request.data)["website"]
+        id = as_job(self._post, data)
         return job_response(id)
     
     def _post(self, data):
         message = Message()
-        site = applications.get(data["type"]).modules["website"]
+        app = applications.get(data["type"])
+        site = app._website
         site = site(data["id"], data["name"], data["addr"], data["port"])
         try:
-            specialmsg = site.install(data["data"], True, message)
+            specialmsg = site.install(app, data["data"], True, message)
             message.complete("success", "%s site installed successfully" % site.meta.name)
             if specialmsg:
                 Message("info", specialmsg)
@@ -42,7 +43,7 @@ class WebsitesAPI(MethodView):
             raise
     
     def put(self, id):
-        data = json.loads(request.body)["website"]
+        data = json.loads(request.data)["website"]
         site = websites.get(id)
         if not site:
             abort(404)
@@ -85,8 +86,8 @@ class WebsitesAPI(MethodView):
 
 
 sites_view = WebsitesAPI.as_view('sites_api')
-backend.add_url_rule('/sites/', defaults={'id': None}, 
+backend.add_url_rule('/websites', defaults={'id': None}, 
     view_func=sites_view, methods=['GET',])
-backend.add_url_rule('/sites/', view_func=sites_view, methods=['POST',])
-backend.add_url_rule('/sites/<int:id>', view_func=sites_view, 
+backend.add_url_rule('/websites', view_func=sites_view, methods=['POST',])
+backend.add_url_rule('/websites/<int:id>', view_func=sites_view, 
     methods=['GET', 'PUT', 'DELETE'])
