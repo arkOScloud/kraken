@@ -1,4 +1,3 @@
-import copy
 import json
 
 from flask import Response, Blueprint, abort, jsonify, request
@@ -30,8 +29,8 @@ class CertificatesAPI(MethodView):
             return job_response(id, data={"cert": {"id": data["id"]}})
         elif request.headers.get('Content-Type').startswith("multipart/form-data"):
             name = request.form.get("id")
-            files = [request.files.get("cert").read(), request.files.get("key").read(),
-                request.files.get("chain").read() if request.files.get("chain") else None]
+            files = [request.files.get("file[0]").read(), request.files.get("file[1]").read(),
+                request.files.get("file[2]").read() if request.files.get("file[2]") else None]
             id = as_job(self._upload, name, files)
             return job_response(id)
         else:
