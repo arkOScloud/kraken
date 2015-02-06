@@ -112,9 +112,10 @@ class DatabaseUsersAPI(MethodView):
 
 @backend.route('/database_types')
 def list_types():
+    dbs = databases.get_managers()
     if request.args.get("rescan", None):
-        databases.scan_managers()
-    return jsonify(database_types=[x.as_dict() for x in databases.get_managers()])
+        dbs = databases.scan_managers()
+    return jsonify(database_types=[x.as_dict() for x in dbs])
 
 
 dbs_view = DatabasesAPI.as_view('dbs_api')
