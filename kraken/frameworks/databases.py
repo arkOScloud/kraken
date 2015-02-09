@@ -5,7 +5,7 @@ from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
 from arkos import databases
-from kraken.messages import update_model
+from kraken.messages import push_record
 
 backend = Blueprint("databases", __name__)
 
@@ -19,7 +19,7 @@ class DatabasesAPI(MethodView):
             abort(404)
         if id and request.args.get("download", None):
             result = base64.b64encode(dbs.dump())
-            return jsonify(database={"name": "%s.sql"%dbs.name, 
+            return jsonify(database={"name": "%s.sql"%dbs.id, 
                 "db": result})
         if type(dbs) == list:
             return jsonify(databases=[x.as_dict() for x in dbs])
@@ -30,12 +30,12 @@ class DatabasesAPI(MethodView):
         data = json.loads(request.data)["database"]
         manager = databases.get_managers(data["type"])
         try:
-            db = manager.add_db(data["name"])
+            db = manager.add_db(data["id"])
         except Exception, e:
             resp = jsonify(message="Database couldn't be added: %s" % str(e))
             resp.status_code = 422
             return resp
-        return jsonify(database=db.as_dict(), message="Database %s added successfully" % str(db.name))
+        return jsonify(database=db.as_dict(), message="Database %s added successfully" % str(db.id))
     
     def put(self, id):
         data = json.loads(request.data)["database"]
@@ -79,12 +79,12 @@ class DatabaseUsersAPI(MethodView):
         data = json.loads(request.data)["database_user"]
         manager = databases.get_managers(data["type"])
         try:
-            u = manager.add_user(data["name"], data["passwd"])
+            u = manager.add_user(data["id"], data["passwd"])
         except Exception, e:
             resp = jsonify(message="Database user couldn't be added: %s" % str(e))
             resp.status_code = 422
             return resp
-        return jsonify(database_user=u.as_dict(), message="Database user %s added successfully" % str(u.name))
+        return jsonify(database_user=u.as_dict(), message="Database user %s added successfully" % str(u.id))
     
     def put(self, id):
         data = json.loads(request.data)["database_user"]
@@ -94,7 +94,7 @@ class DatabaseUsersAPI(MethodView):
         elif not data.get("operation"):
             abort(400)
         u.chperm(data["operation"], databases.get(data["database"]))
-        update_model("database_users", u.as_dict())
+        push_record("database_users", u.as_dict())
         return Response(status=201)
     
     def delete(self, id):
