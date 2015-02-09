@@ -4,7 +4,7 @@ from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
 from arkos import certificates
-from kraken.messages import Message, update_model
+from kraken.messages import Message, push_record
 from kraken.utilities import as_job, job_response
 
 backend = Blueprint("certs", __name__)
@@ -44,7 +44,7 @@ class CertificatesAPI(MethodView):
                 data["country"], data["state"], data["locale"], data["email"], 
                 data["keytype"], data["keylength"])
             message.complete("success", "Certificate generated successfully")
-            update_model("certs", cert.as_dict())
+            push_record("certs", cert.as_dict())
         except Exception, e:
             message.complete("error", "Certificate could not be generated: %s" % str(e))
             raise
@@ -55,7 +55,7 @@ class CertificatesAPI(MethodView):
         try:
             cert = certificates.upload_certificate(name, files[0], files[1], files[2])
             message.complete("success", "Certificate uploaded successfully")
-            update_model("certs", cert.as_dict())
+            push_record("certs", cert.as_dict())
         except Exception, e:
             message.complete("error", "Certificate could not be uploaded: %s" % str(e))
             raise

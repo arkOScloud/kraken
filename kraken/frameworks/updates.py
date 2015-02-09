@@ -2,7 +2,7 @@ from flask import Response, Blueprint, jsonify, request
 from flask.views import MethodView
 
 from arkos import storage, updates
-from kraken.messages import Message, update_model
+from kraken.messages import Message, push_record
 from kraken.utilities import as_job, job_response
 
 backend = Blueprint("updates", __name__)
@@ -26,7 +26,7 @@ class UpdatesAPI(MethodView):
     
     def _post(self):
         updates.install_updates(Message())
-        update_model("updates", updates.check_updates())
+        push_record("updates", updates.check_updates())
 
 
 updates_view = UpdatesAPI.as_view('updates_api')

@@ -15,7 +15,11 @@ class Job(threading.Thread):
         self._func = func
         self._args = args
         self._kwargs = kwargs
-        self._success_code = kwargs["success_code"] if "success_code" in kwargs else 201
+        if "success_code" in kwargs:
+            self._success_code = kwargs["success_code"]
+            del kwargs["success_code"]
+        else:
+            self._success_code = 201
         threading.Thread.__init__(self)
     
     def run(self):

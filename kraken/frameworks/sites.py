@@ -4,7 +4,7 @@ from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
 from arkos import applications, websites, certificates
-from kraken.messages import Message, update_model
+from kraken.messages import Message, push_record, remove_record
 from kraken.utilities import as_job, job_response
 
 backend = Blueprint("websites", __name__)
@@ -31,15 +31,15 @@ class WebsitesAPI(MethodView):
         message = Message()
         app = applications.get(data["type"])
         site = app._website
-        site = site(data["id"], data["name"], data["addr"], data["port"])
+        site = site(data["id"], data["addr"], data["port"])
         try:
             specialmsg = site.install(app, data["data"], True, message)
             message.complete("success", "%s site installed successfully" % site.meta.name)
             if specialmsg:
                 Message("info", specialmsg)
-            update_model("website", site.as_dict())
+            push_record("website", site.as_dict())
         except Exception, e:
-            message.complete("error", "%s could not be installed: %s" % (site.name, str(e)))
+            message.complete("error", "%s could not be installed: %s" % (data["id"], str(e)))
             raise
     
     def put(self, id):
@@ -53,15 +53,15 @@ class WebsitesAPI(MethodView):
             site.disable()
         elif data.get("operation") == "enable_ssl":
             cert = certificates.get(data["cert"])
-            cert.assign("website", site.name)
+            cert.assign("website", site.id)
         elif data.get("operation") == "disable_ssl":
-            site.cert.unassign("website", site.name)
+            site.cert.unassign("website", site.id)
         elif data.get("operation") == "update":
             site.update()
         else:
             message = Message()
             message.update("info", "Editing site...")
-            site.name = data["name"]
+            site.id = data["id"]
             site.addr = data["addr"]
             site.port = data["port"]
             site.edit(data.get("old_name"))
@@ -69,7 +69,7 @@ class WebsitesAPI(MethodView):
         return jsonify(website=site.as_dict())
     
     def delete(self, id):
-        id = as_job(_delete, id, success_code=204)
+        id = as_job(self._delete, id, success_code=204)
         return job_response(id)
     
     def _delete(self, id):
@@ -77,11 +77,10 @@ class WebsitesAPI(MethodView):
         site = websites.get(id)
         try:
             site.remove(message)
-            site.installed = False
             message.complete("success", "%s site removed successfully" % site.meta.name)
+            remove_record("website", id)
         except Exception, e:
-            site.installed = True
-            message.complete("error", "%s could not be removed: %s" % (site.name, str(e)))
+            message.complete("error", "%s could not be removed: %s" % (id, str(e)))
             raise
 
 
@@ -89,5 +88,5 @@ sites_view = WebsitesAPI.as_view('sites_api')
 backend.add_url_rule('/websites', defaults={'id': None}, 
     view_func=sites_view, methods=['GET',])
 backend.add_url_rule('/websites', view_func=sites_view, methods=['POST',])
-backend.add_url_rule('/websites/<int:id>', view_func=sites_view, 
+backend.add_url_rule('/websites/<string:id>', view_func=sites_view, 
     methods=['GET', 'PUT', 'DELETE'])

@@ -4,7 +4,7 @@ from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
 from arkos.system import filesystems
-from kraken.messages import Message, update_model
+from kraken.messages import Message, push_record
 from kraken.utilities import as_job, job_response
 
 backend = Blueprint("filesystems", __name__)
@@ -48,7 +48,7 @@ class DisksAPI(MethodView):
                 disk.remove()
                 message.complete("error", "Virtual disk could not be encrypted: %s" % str(e))
                 raise
-        update_model("virtual_disk", disk.as_dict())
+        push_record("virtual_disk", disk.as_dict())
     
     def put(self, id):
         data = json.loads(request.body)

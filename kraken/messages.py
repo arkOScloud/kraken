@@ -15,29 +15,31 @@ class Message:
         else:
             data = {"id": self.id, "class": "info", "message": "Please wait...", 
                 "complete": False}
-        storage.append("messages", data)
+        storage.append("genesis:messages", data)
     
     def update(self, cls, msg):
         data = {"id": self.id, "class": cls, "message": msg, "complete": False}
-        storage.append("messages", data)
+        storage.append("genesis:messages", data)
     
     def complete(self, cls, msg):
         data = {"id": self.id, "class": cls, "message": msg, "complete": True}
-        storage.append("messages", data)
+        storage.append("genesis:messages", data)
 
 
-@backend.route('/messages')
+@backend.route('/genesis')
 def get_messages():
-    messages = storage.get_list("messages")
-    updates = storage.get_list("record_updates")
-    storage.delete("messages")
-    storage.delete("record_updates")
-    models = {}
-    for x in updates:
-        if not models.has_key(x["name"]):
-            models[x["name"]] = []
-        models[x["name"]].append(x["model"])
-    return jsonify(messages=messages, models=models)
+    messages = storage.get_list("genesis:messages")
+    _pushes = storage.get_list("genesis:pushes")
+    purges = storage.get_list("genesis:purges")
+    storage.delete("genesis:messages")
+    storage.delete("genesis:pushes")
+    storage.delete("genesis:purges")
+    pushes = {}
+    for x in _pushes:
+        if not pushes.has_key(x["model"]):
+            pushes[x["model"]] = []
+        pushes[x["model"]].append(x["record"])
+    return jsonify(messages=messages, pushes=pushes, purges=purges)
 
 @backend.route('/job')
 def get_jobs():
@@ -53,5 +55,8 @@ def get_job(id):
         abort(404)
     return Response(status=job["status"])
 
-def update_model(name, model):
-    storage.append("record_updates", {"name": name, "model": model})
+def push_record(name, model):
+    storage.append("genesis:pushes", {"model": name, "record": model})
+
+def remove_record(name, id):
+    storage.append("genesis:purges", {"model": name, "id": id})

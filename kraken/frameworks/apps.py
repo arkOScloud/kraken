@@ -4,7 +4,7 @@ from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
 from arkos import applications
-from kraken.messages import Message, update_model
+from kraken.messages import Message, push_record
 from kraken.utilities import as_job, job_response
 
 backend = Blueprint("apps", __name__)
@@ -35,7 +35,7 @@ class ApplicationsAPI(MethodView):
         try:
             applications.install(app["id"], message=message)
             message.complete("success", "%s installed successfully" % app["name"])
-            update_model("applications", applications.get())
+            push_record("applications", applications.get())
         except Exception, e:
             message.complete("error", "%s could not be installed: %s" % (app["name"], str(e)))
             raise
