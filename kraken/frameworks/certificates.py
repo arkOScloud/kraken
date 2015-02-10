@@ -90,9 +90,11 @@ class CertificateAuthoritiesAPI(MethodView):
             abort(404)
         if id and request.args.get("download", None):
             with open(certs.cert_path, "r") as f:
-                certfile = base64.b64encode(f.read())
-            return jsonify(certauth={"name": "%s.crt"%certs.name, 
-                "cert": certfile})
+                data = f.read()
+            resp = Response(data, mimetype="application/octet-stream")
+            resp.headers["Content-Length"] = str(len(data.encode('utf-8')))
+            resp.headers["Content-Disposition"] = "attachment; filename=%s.pem" % id
+            return resp
         if type(certs) == list:
             return jsonify(certauths=[x.as_dict() for x in certs])
         else:

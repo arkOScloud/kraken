@@ -1,7 +1,6 @@
-import base64
 import json
 
-from flask import Response, Blueprint, abort, jsonify, request
+from flask import make_response, Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
 from arkos import databases
@@ -18,9 +17,11 @@ class DatabasesAPI(MethodView):
         if id and not dbs:
             abort(404)
         if id and request.args.get("download", None):
-            result = base64.b64encode(dbs.dump())
-            return jsonify(database={"name": "%s.sql"%dbs.id, 
-                "db": result})
+            data = dbs.dump()
+            resp = Response(data, mimetype="application/octet-stream")
+            resp.headers["Content-Length"] = str(len(data.encode('utf-8')))
+            resp.headers["Content-Disposition"] = "attachment; filename=%s.sql" % id
+            return resp
         if type(dbs) == list:
             return jsonify(databases=[x.as_dict() for x in dbs])
         else:
