@@ -29,17 +29,18 @@ class WebsitesAPI(MethodView):
     
     def _post(self, data):
         message = Message()
-        app = applications.get(data["type"])
+        app = applications.get(data["site_type"])
         site = app._website
         site = site(data["id"], data["addr"], data["port"])
         try:
-            specialmsg = site.install(app, data["data"], True, message)
+            specialmsg = site.install(app, data["extra_data"], True, message)
             message.complete("success", "%s site installed successfully" % site.meta.name)
             if specialmsg:
                 Message("info", specialmsg)
             push_record("website", site.as_dict())
         except Exception, e:
             message.complete("error", "%s could not be installed: %s" % (data["id"], str(e)))
+            remove_record("website", data["id"])
             raise
     
     def put(self, id):

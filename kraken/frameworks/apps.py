@@ -1,6 +1,7 @@
 import json
+import os
 
-from flask import Response, Blueprint, abort, jsonify, request
+from flask import Response, Blueprint, abort, jsonify, request, send_from_directory
 from flask.views import MethodView
 
 from arkos import applications
@@ -14,7 +15,7 @@ class ApplicationsAPI(MethodView):
     def get(self, id):
         if request.args.get("rescan", None):
             applications.scan()
-        apps = applications.get(id)
+        apps = applications.get(id, type=request.args.get("type", None))
         if id and not apps:
             abort(404)
         if type(apps) == list:
@@ -56,6 +57,13 @@ class ApplicationsAPI(MethodView):
             message.complete("error", "%s could not be uninstalled: %s" % (app.name, str(e)))
             raise
 
+
+@backend.route('/apps/logo/<string:id>')
+def get_app_logo(id):
+    app = applications.get(id)
+    if not app:
+        abort(404)
+    return send_from_directory(os.path.join('/var/lib/arkos/applications', id, 'assets'), "logo.png")
 
 @backend.route('/apps/available/')
 def list_available():
