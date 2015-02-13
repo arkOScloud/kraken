@@ -49,9 +49,9 @@ class WebsitesAPI(MethodView):
         if not site:
             abort(404)
         if data.get("operation") == "enable":
-            site.enable()
+            site.nginx_enable()
         elif data.get("operation") == "disable":
-            site.disable()
+            site.nginx_disable()
         elif data.get("operation") == "enable_ssl":
             cert = certificates.get(data["cert"])
             cert.assign("website", site.id)
@@ -60,14 +60,12 @@ class WebsitesAPI(MethodView):
         elif data.get("operation") == "update":
             site.update()
         else:
-            message = Message()
-            message.update("info", "Editing site...")
-            site.id = data["id"]
             site.addr = data["addr"]
             site.port = data["port"]
-            site.edit(data.get("old_name"))
-            message.complete("success", "Site edited successfully")
-        return jsonify(website=site.as_dict())
+            site.edit(data.get("new_name"))
+        push_record("website", site.as_dict())
+        remove_record("website", id)
+        return jsonify(message="Site edited successfully")
     
     def delete(self, id):
         id = as_job(self._delete, id, success_code=204)
