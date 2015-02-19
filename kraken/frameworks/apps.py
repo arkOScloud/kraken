@@ -15,7 +15,8 @@ class ApplicationsAPI(MethodView):
     def get(self, id):
         if request.args.get("rescan", None):
             applications.scan()
-        apps = applications.get(id, type=request.args.get("type", None))
+        apps = applications.get(id, type=request.args.get("type", None), 
+            loadable=request.args.get("loadable", None))
         if id and not apps:
             abort(404)
         if type(apps) == list:

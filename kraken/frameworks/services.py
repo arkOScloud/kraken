@@ -52,7 +52,7 @@ class ServicesAPI(MethodView):
                 tag = "disabled"
                 svc.disable()
         except services.ActionError, e:
-            resp = jsonify(message="%s service could not be %s." % (data["id"], tag))
+            resp = jsonify(message="%s service could not be %s." % (id, tag))
             resp.status_code = 422
             return resp
         return jsonify(service=svc.as_dict())
