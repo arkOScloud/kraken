@@ -12,15 +12,13 @@ backend = Blueprint("filesystems", __name__)
 
 class DisksAPI(MethodView):
     def get(self, id):
-        disks, vdisks = filesystems.get_disk_partitions(), filesystems.get_virtual_disks()
-        if id:
-            for x in disks+vdisks:
-                if x.id == id:
-                    return jsonify(filesystem=x.as_dict())
+        disks = filesystems.get(id)
+        if id and not disks:
             abort(404)
-        if id and not disks+vdisks:
-            abort(404)
-        return jsonify(filesystems=[x.as_dict() for x in disks+vdisks])
+        if type(disks) == list:
+            return jsonify(filesystems=[x.as_dict() for x in disks])
+        else:
+            return jsonify(filesystem=disks.as_dict())
     
     def post(self):
         data = json.loads(request.data)["filesystem"]
@@ -49,17 +47,12 @@ class DisksAPI(MethodView):
     
     def put(self, id):
         data = json.loads(request.data)["filesystem"]
-        disks, vdisks = filesystems.get_disk_partitions(), filesystems.get_virtual_disks()
-        for x in disks+vdisks:
-            if x.id == id:
-                disk = x
-                break
-        else:
-            abort(404)
+        disk = filesystems.get(id)
         if not id or not disk:
             abort(404)
         try:
             if data["operation"] == "mount":
+                op = "mounted"
                 if disk.mountpoint:
                     abort(400)
                 elif disk.crypt and not data.get("passwd"):
@@ -68,12 +61,19 @@ class DisksAPI(MethodView):
                     disk.mountpoint = data["mountpoint"]
                 disk.mount(data.get("passwd"))
             elif data["operation"] == "umount":
+                op = "unmounted"
                 disk.umount()
+            elif data["operation"] == "enable":
+                op = "enabled"
+                disk.enable()
+            elif data["operation"] == "disable":
+                op = "disabled"
+                disk.disable()
         except Exception, e:
             resp = jsonify(message="Operation failed: %s" % str(e))
             resp.status_code = 422
             return resp
-        return jsonify(filesystem=disk.as_dict(), message="Disk %s successfully"%("mounted" if data["operation"] == "mount" else "unmounted"))
+        return jsonify(filesystem=disk.as_dict(), message="Disk %s successfully"%op)
     
     def delete(self, id):
         disk = filesystems.get_virtual_disks(id)
