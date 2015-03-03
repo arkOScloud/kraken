@@ -76,7 +76,7 @@ class DisksAPI(MethodView):
         return jsonify(filesystem=disk.as_dict(), message="Disk %s successfully"%op)
     
     def delete(self, id):
-        disk = filesystems.get_virtual_disks(id)
+        disk = filesystems.get(id)
         if not id or not disk:
             abort(404)
         disk.remove()
