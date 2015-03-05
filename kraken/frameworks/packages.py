@@ -4,7 +4,7 @@ import pacman
 from flask import Response, Blueprint, jsonify, request, abort
 from flask.views import MethodView
 from kraken.utilities import as_job, job_response
-from kraken.messages import Message
+from kraken.messages import Message, push_record, remove_record
 
 backend = Blueprint("packages", __name__)
 
@@ -13,15 +13,12 @@ class PackagesAPI(MethodView):
     def get(self, id):
         if id:
             try:
-                data = {}
-                info = pacman.get_info(id)
-                for x in info:
-                    data[x.lower().replace(" ", "_")] = info[x]
-                return jsonify(package=data)
+                info = process_info(pacman.get_info(id))
+                return jsonify(package=info)
             except:
                 abort(404)
         else:
-            return jsonify(packages=pacman.get_installed())
+            return jsonify(packages=pacman.get_all())
     
     def post(self):
         install, remove = [], []
@@ -42,6 +39,14 @@ class PackagesAPI(MethodView):
                 prereqs = pacman.needs_for(install)
                 message.update("info", "Installing %s package(s): %s" % (len(prereqs), ', '.join(prereqs)))
                 pacman.install(install)
+                for x in prereqs:
+                    try:
+                        info = process_info(pacman.get_info(x))
+                        if not "installed" in info:
+                            info["installed"] = True
+                        push_record("package", info)
+                    except:
+                        pass
             except Exception, e:
                 message.complete("error", str(e))
                 return
@@ -50,10 +55,30 @@ class PackagesAPI(MethodView):
                 prereqs = pacman.depends_for(remove)
                 message.update("info", "Removing %s package(s): %s" % (len(prereqs), ', '.join(prereqs)))
                 pacman.remove(remove)
+                for x in prereqs:
+                    try:
+                        info = process_info(pacman.get_info(x))
+                        if not "installed" in info:
+                            info["installed"] = False
+                        push_record("package", info)
+                    except:
+                        pass
             except Exception, e:
                 message.complete("error", str(e))
                 return
         message.complete("success", "Operations completed successfully")
+
+
+def process_info(info):
+    data = {}
+    for x in info:
+        if x == "Name":
+            data["id"] = info["Name"]
+            continue
+        data[x.lower().replace(" ", "_")] = info[x]
+    if not "upgradable" in data:
+        data["upgradable"] = False
+    return data
 
 
 packages_view = PackagesAPI.as_view('sites_api')
@@ -62,18 +87,3 @@ backend.add_url_rule('/system/packages', defaults={'id': None},
 backend.add_url_rule('/system/packages', view_func=packages_view, methods=['POST',])
 backend.add_url_rule('/system/packages/<string:id>', view_func=packages_view, 
     methods=['GET',])
-
-@backend.route('/system/packages/available', defaults={'id': None}, methods=["GET",])
-@backend.route('/system/packages/available/<string:id>', methods=["GET",])
-def get_available(id):
-    if id:
-        try:
-            data = {}
-            info = pacman.get_info(id, False)
-            for x in info:
-                data[x.lower().replace(" ", "_")] = info[x]
-            return jsonify(package=data)
-        except:
-            abort(404)
-    else:
-        return jsonify(packages=pacman.get_available())
