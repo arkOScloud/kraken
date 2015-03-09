@@ -25,7 +25,7 @@ class ApplicationsAPI(MethodView):
             return jsonify(app=apps.as_dict())
     
     def post(self):
-        data = json.loads(request.body)["available_app"]
+        data = json.loads(request.data)["app"]
         app = applications.get_available(data["id"])
         if not app:
             abort(404)
@@ -59,34 +59,11 @@ class ApplicationsAPI(MethodView):
             raise
 
 
-@backend.route('/apps/logo/<string:id>')
-def get_app_logo(id):
-    app = applications.get(id)
-    if not app:
-        abort(404)
-    return send_from_directory(os.path.join('/var/lib/arkos/applications', id, 'assets'), "logo.png")
-
-@backend.route('/apps/available/')
-def list_available():
-    if request.args.get("rescan", None):
-        applications.scan_available()
-    return jsonify(available_apps=[x.as_dict() for x in applications.get_available()])
-
-@backend.route('/apps/updatable/')
-def list_updatable():
-    if request.args.get("rescan", None):
-        applications.scan_updatable()
-    return jsonify(updatable_apps=[x.as_dict() for x in applications.get_updatable()])
-
-
 apps_view = ApplicationsAPI.as_view('apps_api')
-backend.add_url_rule('/apps/', defaults={'id': None}, 
+backend.add_url_rule('/apps', defaults={'id': None}, 
     view_func=apps_view, methods=['GET',])
-backend.add_url_rule('/apps/', view_func=apps_view, methods=['POST',])
+backend.add_url_rule('/apps', view_func=apps_view, methods=['POST',])
 backend.add_url_rule('/apps/<string:id>', view_func=apps_view, 
     methods=['GET', 'DELETE'])
 
-# TODO fix
 applications.get()
-#applications.get_available()
-#applications.get_updatable()
