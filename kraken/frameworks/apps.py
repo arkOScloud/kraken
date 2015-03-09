@@ -16,7 +16,8 @@ class ApplicationsAPI(MethodView):
         if request.args.get("rescan", None):
             applications.scan()
         apps = applications.get(id, type=request.args.get("type", None), 
-            loadable=request.args.get("loadable", None))
+            loadable=request.args.get("loadable", None),
+            installed=request.args.get("installed", None))
         if id and not apps:
             abort(404)
         if type(apps) == list:
@@ -65,5 +66,12 @@ backend.add_url_rule('/apps', defaults={'id': None},
 backend.add_url_rule('/apps', view_func=apps_view, methods=['POST',])
 backend.add_url_rule('/apps/<string:id>', view_func=apps_view, 
     methods=['GET', 'DELETE'])
+
+@backend.route('/apps/logo/<string:id>')
+def get_app_logo(id):
+    app = applications.get(id)
+    if not app:
+        abort(404)
+    return send_from_directory(os.path.join('/var/lib/arkos/applications', id, 'assets'), "logo.png")
 
 applications.get()
