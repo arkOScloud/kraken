@@ -25,36 +25,43 @@ class ApplicationsAPI(MethodView):
         else:
             return jsonify(app=apps.as_dict())
     
-    def post(self):
-        data = json.loads(request.data)["app"]
-        app = applications.get_available(data["id"])
-        if not app:
-            abort(404)
-        id = as_job(_post, self, app)
-        return job_response(id)
-    
-    def _post(self, app):
-        message = Message()
-        try:
-            applications.install(app["id"], message=message)
-            message.complete("success", "%s installed successfully" % app["name"])
-            push_record("applications", applications.get())
-        except Exception, e:
-            message.complete("error", "%s could not be installed: %s" % (app["name"], str(e)))
-            raise
-    
-    def delete(self, id):
+    def put(self, id):
+        operation = json.loads(request.data)["app"]["operation"]
         app = applications.get(id)
         if not app:
             abort(404)
-        id = as_job(_delete, self, app, success_code=204)
-        return job_response(id)
+        if operation == "install":
+            id = as_job(self._install, app)
+        elif operation == "uninstall":
+            if not app.installed:
+                resp = jsonify(message="Application isn't yet installed")
+                resp.status_code = 422
+                return resp
+            id = as_job(self._uninstall, app)
+        else:
+            resp = jsonify(message="Unknown operation specified")
+            resp.status_code = 422
+            return resp
+        data = app.as_dict()
+        data["is_ready"] = False
+        return job_response(id, {"app": data})
     
-    def _delete(self, app):
+    def _install(self, app):
+        message = Message()
+        try:
+            app.install(message=message)
+            message.complete("success", "%s installed successfully" % app.name)
+            push_record("app", app.as_dict())
+        except Exception, e:
+            message.complete("error", "%s could not be installed: %s" % (app.name, str(e)))
+            raise
+    
+    def _uninstall(self, app):
         message = Message()
         try:
             app.uninstall(message=message)
             message.complete("success", "%s uninstalled successfully" % app.name)
+            push_record("app", app.as_dict())
         except Exception, e:
             message.complete("error", "%s could not be uninstalled: %s" % (app.name, str(e)))
             raise
@@ -63,9 +70,8 @@ class ApplicationsAPI(MethodView):
 apps_view = ApplicationsAPI.as_view('apps_api')
 backend.add_url_rule('/apps', defaults={'id': None}, 
     view_func=apps_view, methods=['GET',])
-backend.add_url_rule('/apps', view_func=apps_view, methods=['POST',])
 backend.add_url_rule('/apps/<string:id>', view_func=apps_view, 
-    methods=['GET', 'DELETE'])
+    methods=['GET', 'PUT', 'DELETE'])
 
 @backend.route('/apps/logo/<string:id>')
 def get_app_logo(id):
