@@ -50,7 +50,10 @@ class ApplicationsAPI(MethodView):
         message = Message()
         try:
             app.install(message=message)
-            message.complete("success", "%s installed successfully" % app.name)
+            smsg = "%s installed successfully." % app.name
+            if app.type == "website":
+                smsg += " Go to 'My Applications > %s > Add Website' to set up a site using this app." % app.name
+            message.complete("success", smsg)
             push_record("app", app.as_dict())
         except Exception, e:
             message.complete("error", "%s could not be installed: %s" % (app.name, str(e)))
