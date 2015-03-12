@@ -11,7 +11,7 @@ backend = Blueprint("config", __name__)
 @backend.route('/config', methods=["GET", "PUT"])
 def arkos_config():
     if request.method == "PUT":
-        config.config = json.loads(request.body)["config"]
+        config.config = json.loads(request.data)["config"]
         config.save()
     return jsonify(config=config.config)
 
@@ -31,8 +31,7 @@ def timezone():
 def datetime():
     if request.method == "PUT":
         systemtime.set_datetime()
-    return jsonify(datetime={"date": systemtime.get_date(), 
-        "time": systemtime.get_time(), "offset": systemtime.get_offset()})
+    return jsonify(datetime={"datetime": systemtime.get_iso_time(), "offset": systemtime.get_offset()})
 
 @backend.route('/system/shutdown', methods=["POST",])
 def shutdown():
