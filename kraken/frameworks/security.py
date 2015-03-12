@@ -3,7 +3,7 @@ import json
 from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
-from arkos import security, tracked_services
+from arkos import security, tracked_services, websites
 from kraken.messages import Message
 
 backend = Blueprint("security", __name__)
@@ -11,6 +11,7 @@ backend = Blueprint("security", __name__)
 
 class PolicyAPI(MethodView):
     def get(self, id):
+        websites.get()
         svcs = tracked_services.get(id)
         if id and not svcs:
             abort(404)
@@ -20,11 +21,11 @@ class PolicyAPI(MethodView):
             return jsonify(policy=svcs.as_dict())
     
     def put(self, id):
-        data = json.loads(request.body)["policy"]
+        data = json.loads(request.data)["policy"]
         policy = tracked_services.get(id)
         if not id or not policy:
             abort(404)
-        policy.policy = data["level"]
+        policy.policy = data["policy"]
         policy.save()
         return jsonify(policy=policy.as_dict())
 
@@ -34,7 +35,7 @@ class DefenceAPI(MethodView):
         return jsonify(jails=security.get_defense_rules())
     
     def put(self, id):
-        data = json.loads(request.body)["jail"]
+        data = json.loads(request.data)["jail"]
         if data["operation"] == "enable":
             security.enable_all_def(data["name"])
         else:
@@ -42,11 +43,11 @@ class DefenceAPI(MethodView):
 
 
 policy_view = PolicyAPI.as_view('policy_api')
-backend.add_url_rule('/system/policy/', defaults={'id': None}, 
+backend.add_url_rule('/system/policies', defaults={'id': None}, 
     view_func=policy_view, methods=['GET',])
-backend.add_url_rule('/system/policy/<int:id>', view_func=policy_view, methods=['GET', 'PUT'])
+backend.add_url_rule('/system/policies/<string:id>', view_func=policy_view, methods=['GET', 'PUT'])
 
 defence_view = DefenceAPI.as_view('defence_api')
-backend.add_url_rule('/system/defence/', defaults={'id': None}, 
+backend.add_url_rule('/system/jails', defaults={'id': None}, 
     view_func=defence_view, methods=['GET',])
-backend.add_url_rule('/system/defence/<int:id>', view_func=defence_view, methods=['GET', 'PUT'])
+backend.add_url_rule('/system/jails/<string:id>', view_func=defence_view, methods=['GET', 'PUT'])
