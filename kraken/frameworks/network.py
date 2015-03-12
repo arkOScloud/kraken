@@ -1,6 +1,6 @@
 import json
 
-from flask import Response, Blueprint, abort, jsonify
+from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
 from arkos.system import network
@@ -19,13 +19,13 @@ class NetworksAPI(MethodView):
             return jsonify(network=nets.as_dict())
     
     def post(self):
-        data = json.loads(request.body)["network"]
-        net = network.Connection(name=data["name"], config=data["config"])
+        data = json.loads(request.data)["network"]
+        net = network.Connection(name=data["id"], config=data["config"])
         net.add()
         return jsonify(network=net)
     
     def put(self, id):
-        data = json.loads(request.body)["network"]
+        data = json.loads(request.data)["network"]
         net = network.get_connections(id)
         if not id or not net:
             abort(404)
@@ -39,14 +39,17 @@ class NetworksAPI(MethodView):
                     net.enable()
                 elif data["operation"] == "disable":
                     net.disable()
-            except:
-                abort(500)
-            abort(400)
+                else:
+                    abort(422)
+            except Exception, e:
+                resp = jsonify(message=str(e))
+                resp.status_code = 500
+                return resp
         else:
-            net.name = data["name"]
+            net.id = data["id"]
             net.config = data["config"]
             net.update()
-        return jsonify(network=net)
+        return jsonify(network=net.as_dict())
     
     def delete(self, id):
         net = network.get_connections(id)
@@ -57,8 +60,8 @@ class NetworksAPI(MethodView):
 
 
 network_view = NetworksAPI.as_view('networks_api')
-backend.add_url_rule('/system/networks/', defaults={'id': None}, 
+backend.add_url_rule('/system/networks', defaults={'id': None}, 
     view_func=network_view, methods=['GET',])
-backend.add_url_rule('/system/networks/', view_func=network_view, methods=['POST',])
+backend.add_url_rule('/system/networks', view_func=network_view, methods=['POST',])
 backend.add_url_rule('/system/networks/<string:id>', view_func=network_view, 
     methods=['GET', 'PUT', 'DELETE'])
