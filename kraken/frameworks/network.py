@@ -11,7 +11,7 @@ backend = Blueprint("networks", __name__)
 class NetworksAPI(MethodView):
     def get(self, id):
         nets = network.get_connections(id)
-        if not nets:
+        if id and not nets:
             abort(404)
         if type(nets) == list:
             return jsonify(networks=[x.as_dict() for x in nets])
@@ -20,9 +20,9 @@ class NetworksAPI(MethodView):
     
     def post(self):
         data = json.loads(request.data)["network"]
-        net = network.Connection(name=data["id"], config=data["config"])
+        net = network.Connection(id=data["id"], config=data["config"])
         net.add()
-        return jsonify(network=net)
+        return jsonify(network=net.as_dict())
     
     def put(self, id):
         data = json.loads(request.data)["network"]
@@ -46,7 +46,6 @@ class NetworksAPI(MethodView):
                 resp.status_code = 500
                 return resp
         else:
-            net.id = data["id"]
             net.config = data["config"]
             net.update()
         return jsonify(network=net.as_dict())
@@ -57,6 +56,18 @@ class NetworksAPI(MethodView):
             abort(404)
         net.remove()
         return Response(status=204)
+
+
+@backend.route('/system/netifaces', defaults={'id': None})
+@backend.route('/system/netifaces/<string:id>')
+def get_netifaces(id):
+    ifaces = network.get_interfaces(id)
+    if id and not ifaces:
+        abort(404)
+    if type(ifaces) == list:
+        return jsonify(netifaces=[x.as_dict() for x in ifaces])
+    else:
+        return jsonify(netiface=ifaces.as_dict())
 
 
 network_view = NetworksAPI.as_view('networks_api')
