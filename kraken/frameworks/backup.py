@@ -38,21 +38,22 @@ class BackupsAPI(MethodView):
     
     def put(self, id, time):
         data = json.loads(request.data).get("backup")
+        data["id"] = id+"/"+time
         if id and time and data:
             id = as_job(self._put, data)
-            return job_response(id)
+            return job_response(id, data={"backup": data})
         else:
             abort(404)
     
     def _put(self, data):
         message = Message()
         message.update("info", "Restoring %s..." % data["pid"])
-        #try:
-        b = backup.restore(data)
-        message.complete("success", "%s restored successfully" % data["pid"])
-        push_record("backups", b)
-        #except Exception, e:
-        #    message.complete("error", "%s could not be restored: %s" % (data["pid"], str(e)))
+        try:
+            b = backup.restore(data)
+            message.complete("success", "%s restored successfully" % b["pid"])
+            push_record("backup", b)
+        except Exception, e:
+            message.complete("error", "%s could not be restored: %s" % (data["pid"], str(e)))
     
     def delete(self, id, time):
         backup.remove(id, time)
