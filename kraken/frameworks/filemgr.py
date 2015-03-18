@@ -1,5 +1,6 @@
 import grp
 import json
+import mimetypes
 import os
 import pwd
 import shutil
@@ -39,6 +40,7 @@ class FileManagerAPI(MethodView):
             data = []
             for x in os.listdir(path):
                 data.append(as_dict(os.path.join(path, x)))
+            data = sorted(sorted(data, key=lambda x: x["name"]), key=lambda x: x["folder"], reverse=True)
             return jsonify(files=data)
         else:
             return jsonify(file=as_dict(path))
@@ -51,17 +53,25 @@ class FileManagerAPI(MethodView):
             resp = jsonify(message="Can only upload into folders")
             resp.status_code = 422
             return resp
-        data = request.files.get("file")
-        if type(data) == list:
-            for x in data:
-                filename = secure_filename(x.filename)
-                x.save(os.path.join(path, filename))
+        if request.headers.get('Content-Type').startswith("multipart/form-data"):
+            data = request.files.get("file")
+            if type(data) == list:
+                for x in data:
+                    filename = secure_filename(x.filename)
+                    x.save(os.path.join(path, filename))
+            else:
+                filename = secure_filename(data.filename)
+                data.save(os.path.join(path, filename))
+            data = []
+            for x in os.listdir(path):
+                data.append(as_dict(os.path.join(path, x)))
         else:
-            filename = secure_filename(data.filename)
-            data.save(os.path.join(path, filename))
-        data = []
-        for x in os.listdir(path):
-            data.append(as_dict(os.path.join(path, x)))
+            data = json.loads(request.data)
+            if data["new"] == "file":
+                with open(os.path.join(path, data["name"]), 'w') as f:
+                    f.write()
+            elif data["new"] == "folder":
+                os.makedirs(os.path.join(path, data["name"]))
         return as_dict(path)
     
     def put(self, path):
@@ -95,21 +105,28 @@ def as_dict(path):
     if os.path.ismount(path):
         data["type"] = "mount"
         data["folder"] = True
+        icon = "fa-hdd-o"
     elif stat.S_ISLNK(mode):
         data["type"] = "link"
         data["realpath"] = os.path.realpath(path)
         data["folder"] = os.path.isdir(data["realpath"])
+        icon = "fa-link"
     elif stat.S_ISDIR(mode):
         data["type"] = "folder"
         data["folder"] = True
+        icon = "fa-folder"
     elif stat.S_ISSOCK(mode):
         data["type"] = "socket"
+        icon = "fa-plug"
     elif stat.S_ISBLK(mode):
         data["type"] = "block"
+        icon = "fa-hdd-o"
     elif stat.S_ISREG(mode):
         data["type"] = "file"
+        icon = guess_file_icon(name)
     else:
         data["type"] = "unknown"
+        icon = "fa-question-circle"
     try:
         data["perms"] = {"oct": oct(stat.S_IMODE(mode)), "str": str_fperms(mode)}
         data["size"] = fstat[stat.ST_SIZE]
@@ -127,8 +144,41 @@ def as_dict(path):
         tc = "".join(map(chr, [7,8,9,10,12,13,27] + range(0x20, 0x100)))
         ibs = lambda b: bool(b.translate(None, tc))
         with open(path, 'r') as f:
-            data["binary"] = ibs(f.read(1024))
+            try:
+                data["binary"] = ibs(f.read(1024))
+            except:
+                data["binary"] = True
+    else:
+        data["binary"] = False
+    data["mimetypes"] = mimetypes.guess_type(path)[0]
+    data["genesis"] = {
+        "icon": icon,
+        "file": not data["binary"]
+    }
+    data["selected"] = False
     return data
+
+def guess_file_icon(name):
+    if name.endswith((".xls", ".xlsx", ".ods")):
+        return "fa-file-excel-o"
+    elif name.endswith((".mp3", ".wav", ".flac", ".ogg", ".m4a", ".wma", ".aac")):
+        return "fa-file-audio-o"
+    elif name.endswith((".mkv", ".avi", ".mov", ".wmv", ".mp4", ".m4v", ".mpg")):
+        return "fa-file-video-o"
+    elif name.endswith(".pdf"):
+        return "fa-file-pdf-o"
+    elif name.endswith((".ppt", ".pptx", ".odp")):
+        return "fa-file-powerpoint-o"
+    elif name.endswith((".jpg", ".jpeg", ".png", ".gif", ".tif", ".tiff", ".bmp")):
+        return "fa-file-image-o"
+    elif name.endswith((".zip", ".tar", ".gz", ".bz2", ".rar")):
+        return "fa-file-archive-o"
+    elif name.endswith((".doc", ".docx", ".odt")):
+        return "fa-file-word-o"
+    elif name.endswith((".php", ".js", ".py", ".sh", ".html", ".xml", ".rb")):
+        return "fa-file-code-o"
+    else:
+        return "fa-file-o"
 
 
 filemgr_view = FileManagerAPI.as_view('filemgr_api')
