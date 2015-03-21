@@ -76,7 +76,6 @@ def genesis(path):
     elif config.get("enviro", "run", None) == "dev":
         sdir = os.path.dirname(os.path.realpath(__file__))
         sdir = os.path.abspath(os.path.join(sdir, '../../genesis/dist'))
-        print sdir
         return send_from_directory(sdir, path or 'index.html')
     elif os.path.exists('/var/lib/arkos/genesis/dist'):
         return send_from_directory('/var/lib/arkos/genesis/dist', path or 'index.html')
