@@ -57,7 +57,7 @@ def run_daemon(environment, log_level, config_file):
     app.conf.set("enviro", "run", environment)
     app.logger.info("Server is up and ready")
     try:
-        app.run(host="0.0.0.0", port=8765)
+        app.run(host="0.0.0.0", port=8000)
     except KeyboardInterrupt:
         app.logger.info("Received interrupt")
 
