@@ -6,25 +6,27 @@ import os
 import logging
 # TODO remove me
 sys.path.append("/root/core")
+sys.path.append("/home/vagrant/core")
 
 from arkos.daemon import Daemon
 from kraken.application import run_daemon
 
 class KrakenDaemon(Daemon):
     def run(self):
-        run_daemon(self.log_level, self.config_file)
+        run_daemon(self.environment, self.log_level, self.config_file)
 
 
 def usage():
     print """
 Usage: kraken [options]
 Options:
-    -c, --config <file> - Use given config file instead of default
-    -v                  - Debug/verbose logging
-    -d, --start         - Run in background (daemon mode)
-    -r, --restart       - Restart daemon
-    -s, --stop          - Stop daemon
-    -h, --help          - This help
+    -c, --config <file>  - Use given config file instead of default
+    -e, --env <env>      - Set run environment (dev, vagrant, etc)
+    -v                   - Debug/verbose logging
+    -d, --start          - Run in background (daemon mode)
+    -r, --restart        - Restart daemon
+    -s, --stop           - Stop daemon
+    -h, --help           - This help
     """
 
 
@@ -37,7 +39,7 @@ if __name__ == '__main__':
     config_file = ''
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'hc:drsv', ['help', 'config=', 'start', 'stop', 'restart'])
+        opts, args = getopt.getopt(sys.argv[1:], 'hce:drsv', ['help', 'config=', 'env=', 'start', 'stop', 'restart'])
     except getopt.GetoptError, e:
         print str(e)
         usage()
@@ -45,6 +47,10 @@ if __name__ == '__main__':
 
     action = 'run'
     os.environ['XTABLES_LIBDIR'] = '/usr/lib/iptables'
+    
+    # TODO remove me
+    environment = "dev"
+    config_file = "/root/core/settings.json"
 
     for o, a in opts:
         if o in ('-h', '--help'):
@@ -55,6 +61,8 @@ if __name__ == '__main__':
         elif o in ('-c', '--config'):
             if os.path.isfile(a):
                 config_file = a
+        elif o in ('-e', '--env'):
+            environment = a
         elif o in ('-d', '--start'):
             action = 'start'
         elif o in ('-r', '--restart'):
@@ -63,8 +71,6 @@ if __name__ == '__main__':
             action = 'stop'
 
     # Find default config file
-    # TODO remove me
-    config_file = "/root/core/settings.json"
     if not config_file:
         # Check for config file in /etc/genesis/genesis.conf
         if os.path.isfile('/etc/arkos/settings.json'):
@@ -76,9 +82,10 @@ if __name__ == '__main__':
             raise Exception("No configuration file found")
     
     if action == 'run':
-        run_daemon(log_level, config_file)
+        run_daemon(environment, log_level, config_file)
     else:
         krakend = KrakenDaemon('/var/run/kraken.pid', stdout='/var/log/kraken.log')
+        krakend.environment = environment
         krakend.log_level = log_level
         krakend.config_file = config_file
 

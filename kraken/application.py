@@ -1,4 +1,5 @@
 import logging
+import os
 import sys
 
 from arkos import config
@@ -6,7 +7,7 @@ from arkos.utilities.logs import ConsoleHandler
 from arkos.utilities import *
 from kraken.framework import register_frameworks
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 from werkzeug.exceptions import default_exceptions, HTTPException
 
 
@@ -35,19 +36,25 @@ def create_app(app, log_level, config_file, debug=False):
     app.logger.info('Detected architecture/hardware: %s, %s' % arch)
     app.logger.info('Detected platform: %s' % platform)
     app.conf.set("enviro", "arch", arch[0])
-    app.conf.set("enviro", "board", arch[1])    
+    app.conf.set("enviro", "board", arch[1])
     
     return app
 
-def run_daemon(log_level, config_file):
+def run_daemon(environment, log_level, config_file):
     create_app(app, log_level, config_file, True)
+    app.logger.info('Environment: %s' % environment)
+    
     for code in default_exceptions.iterkeys():
         app.error_handler_spec[None][code] = make_json_error
 
     # Load framework blueprints
     app.logger.info("Loading frameworks...")
+    app.add_url_rule('/', defaults={'path': None}, view_func=genesis, 
+        methods=['GET',])
+    app.add_url_rule('/<path:path>', view_func=genesis, methods=['GET',])
     register_frameworks(app)
     
+    app.conf.set("enviro", "run", environment)
     app.logger.info("Server is up and ready")
     try:
         app.run(host="0.0.0.0", port=8765)
@@ -61,6 +68,22 @@ def make_json_error(err):
         response = jsonify(message=str(err))
     response.status_code = err.code if isinstance(err, HTTPException) else 500
     return response
+
+def genesis(path):
+    if config.get("enviro", "run", None) == "vagrant":
+        if os.path.exists('/home/vagrant/genesis/dist'):
+            return send_from_directory('/home/vagrant/genesis/dist', path or 'index.html')
+    elif config.get("enviro", "run", None) == "dev":
+        sdir = os.path.dirname(os.path.realpath(__file__))
+        sdir = os.path.abspath(os.path.join(sdir, '../../genesis/dist'))
+        print sdir
+        return send_from_directory(sdir, path or 'index.html')
+    elif os.path.exists('/var/lib/arkos/genesis/dist'):
+        return send_from_directory('/var/lib/arkos/genesis/dist', path or 'index.html')
+    else:
+        resp = jsonify(message="Genesis does not appear to be installed.")
+        resp.status_code = 500
+        return resp
 
 
 app = Flask(__name__)
