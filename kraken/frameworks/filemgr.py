@@ -80,10 +80,24 @@ class FileManagerAPI(MethodView):
             return jsonify(file=as_dict(os.path.join(path, data["name"])))
     
     def put(self, path):
-        path = b64_to_path(path)
-        if not os.path.exists(path):
+        data = json.loads(request.data)["file"]
+        if not os.path.exists(data["path"]):
             abort(404)
-        abort(500)
+        if data["operation"] == "copy":
+            if os.path.exists(os.path.join(data["newdir"], data["name"])):
+                data["name"] = data["name"]+"-copy"
+            if os.path.isdir(data["path"]):
+                shutil.copytree(data["path"], os.path.join(data["newdir"], data["name"]))
+            else:
+                shutil.copy2(data["path"], os.path.join(data["newdir"], data["name"]))
+            return jsonify(file=as_dict(os.path.join(data["newdir"], data["name"])))
+        elif data["operation"] == "rename":
+            shutil.move(data["path"], os.path.join(os.path.split(join(data["path"]))[0], data["name"]))
+        elif data["operation"] == "edit":
+            with open(data["path"], "w") as f:
+                f.write(data["data"])
+        else:
+            abort(422)
     
     def delete(self, path):
         path = b64_to_path(path)
@@ -111,21 +125,28 @@ def as_dict(path):
     if os.path.ismount(path):
         data["type"] = "mount"
         data["folder"] = True
+        data["icon"] = "fa-hdd-o"
     elif stat.S_ISLNK(mode):
         data["type"] = "link"
         data["realpath"] = os.path.realpath(path)
         data["folder"] = os.path.isdir(data["realpath"])
+        data["icon"] = "fa-link"
     elif stat.S_ISDIR(mode):
         data["type"] = "folder"
         data["folder"] = True
+        data["icon"] = "fa-folder"
     elif stat.S_ISSOCK(mode):
         data["type"] = "socket"
+        data["icon"] = "fa-plug"
     elif stat.S_ISBLK(mode):
         data["type"] = "block"
+        data["icon"] = "fa-hdd-o"
     elif stat.S_ISREG(mode):
         data["type"] = "file"
+        data["icon"] = guess_file_icon(name)
     else:
         data["type"] = "unknown"
+        data["icon"] = "fa-question-circle"
     try:
         data["perms"] = {"oct": oct(stat.S_IMODE(mode)), "str": str_fperms(mode)}
         data["size"] = fstat[stat.ST_SIZE]
@@ -152,6 +173,28 @@ def as_dict(path):
     data["mimetype"] = mimetypes.guess_type(path)[0]
     data["selected"] = False
     return data
+
+def guess_file_icon(name):
+    if name.endswith((".xls", ".xlsx", ".ods")):
+        return "fa-file-excel-o"
+    elif name.endswith((".mp3", ".wav", ".flac", ".ogg", ".m4a", ".wma", ".aac")):
+        return "fa-file-audio-o"
+    elif name.endswith((".mkv", ".avi", ".mov", ".wmv", ".mp4", ".m4v", ".mpg")):
+        return "fa-file-video-o"
+    elif name.endswith(".pdf"):
+        return "fa-file-pdf-o"
+    elif name.endswith((".ppt", ".pptx", ".odp")):
+        return "fa-file-powerpoint-o"
+    elif name.endswith((".jpg", ".jpeg", ".png", ".gif", ".tif", ".tiff", ".bmp")):
+        return "fa-file-image-o"
+    elif name.endswith((".zip", ".tar", ".gz", ".bz2", ".rar")):
+        return "fa-file-archive-o"
+    elif name.endswith((".doc", ".docx", ".odt")):
+        return "fa-file-word-o"
+    elif name.endswith((".php", ".js", ".py", ".sh", ".html", ".xml", ".rb")):
+        return "fa-file-code-o"
+    else:
+        return "fa-file-o"
 
 
 filemgr_view = FileManagerAPI.as_view('filemgr_api')
