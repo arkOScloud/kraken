@@ -1,8 +1,9 @@
+import json
 import logging
 import os
 import sys
 
-from arkos import config
+from arkos import config, applications
 from arkos.utilities.logs import ConsoleHandler
 from arkos.utilities import *
 from kraken.framework import register_frameworks
@@ -55,6 +56,7 @@ def run_daemon(environment, log_level, config_file):
     register_frameworks(app)
     
     app.conf.set("enviro", "run", environment)
+    genesis_init()
     app.logger.info("Server is up and ready")
     try:
         app.run(host="0.0.0.0", port=8000)
@@ -69,11 +71,43 @@ def make_json_error(err):
     response.status_code = err.code if isinstance(err, HTTPException) else 500
     return response
 
+def genesis_init():
+    path = ""
+    apps = applications.get()
+    if config.get("enviro", "run") == "vagrant":
+        path = '/home/vagrant/genesis'
+    elif config.get("enviro", "run") == "dev":
+        sdir = os.path.dirname(os.path.realpath(__file__))
+        path = os.path.abspath(os.path.join(sdir, '../../genesis'))
+    elif os.path.exists('/var/lib/arkos/genesis'):
+        path = '/var/lib/arkos/genesis'
+    if not os.path.exists(path):
+        return
+    for x in os.listdir(os.path.join(path, 'lib')):
+        if os.path.islink(os.path.join(path, 'lib', x)):
+            os.unlink(os.path.join(path, 'lib', x))
+    libpaths = []
+    for x in apps:
+        genpath = "/var/lib/arkos/applications/%s/genesis" % x.id
+        if x.type == "app" and os.path.exists(genpath):
+            libpaths.append("lib/%s"%x.id)
+            os.symlink(genpath, os.path.join(path, 'lib', x.id))
+    if libpaths:
+        with open(os.path.join(path, 'package.json'), 'r') as f:
+            data = json.loads(f.read())
+        data["ember-addon"] = {"paths": libpaths}
+        with open(os.path.join(path, 'package.json'), 'w') as f:
+            f.write(json.dumps(data, sort_keys=True, 
+                indent=2, separators=(',', ': ')))
+    s = shell("ember build")
+    if s["code"] != 0:
+        raise Exception("Genesis rebuild process failed")
+    
 def genesis(path):
-    if config.get("enviro", "run", None) == "vagrant":
+    if config.get("enviro", "run") == "vagrant":
         if os.path.exists('/home/vagrant/genesis/dist'):
             return send_from_directory('/home/vagrant/genesis/dist', path or 'index.html')
-    elif config.get("enviro", "run", None) == "dev":
+    elif config.get("enviro", "run") == "dev":
         sdir = os.path.dirname(os.path.realpath(__file__))
         sdir = os.path.abspath(os.path.join(sdir, '../../genesis/dist'))
         return send_from_directory(sdir, path or 'index.html')

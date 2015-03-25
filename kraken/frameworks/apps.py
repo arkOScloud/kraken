@@ -82,5 +82,3 @@ def get_app_logo(id):
     if not app:
         abort(404)
     return send_from_directory(os.path.join('/var/lib/arkos/applications', id, 'assets'), "logo.png")
-
-applications.get()
