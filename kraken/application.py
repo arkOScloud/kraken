@@ -99,7 +99,10 @@ def genesis_init():
         with open(os.path.join(path, 'package.json'), 'w') as f:
             f.write(json.dumps(data, sort_keys=True, 
                 indent=2, separators=(',', ': ')))
+    mydir = os.getcwd()
+    os.chdir(path)
     s = shell("ember build")
+    os.chdir(mydir)
     if s["code"] != 0:
         raise Exception("Genesis rebuild process failed")
     
