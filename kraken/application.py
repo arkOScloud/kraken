@@ -3,7 +3,7 @@ import logging
 import os
 import sys
 
-from arkos import config, applications
+from arkos import config, applications, tracked_services
 from arkos.utilities.logs import ConsoleHandler
 from arkos.utilities import *
 from kraken.framework import register_frameworks
@@ -57,6 +57,7 @@ def run_daemon(environment, log_level, config_file):
     
     app.conf.set("enviro", "run", environment)
     genesis_init()
+    tracked_services.initialize()
     app.logger.info("Server is up and ready")
     try:
         app.run(host="0.0.0.0", port=8000)

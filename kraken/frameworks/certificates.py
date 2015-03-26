@@ -3,7 +3,7 @@ import json
 from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
-from arkos import certificates
+from arkos import certificates, websites, applications
 from kraken.messages import Message, push_record
 from kraken.utilities import as_job, job_response
 
@@ -106,6 +106,18 @@ class CertificateAuthoritiesAPI(MethodView):
             abort(404)
         cert.remove()
         return Response(status=204)
+
+
+@backend.route('/certs/ssl_able')
+def ssl_able():
+    assigns = []
+    for x in websites.get():
+        assigns.append({"type": "website", "name": x.id})
+    for x in applications.get():
+        if x.uses_ssl:
+            for y in x.get_ssl_able():
+                assigns.append(y)
+    return jsonify(assigns=assigns)
 
 
 certs_view = CertificatesAPI.as_view('certs_api')
