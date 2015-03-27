@@ -65,13 +65,13 @@ class CertificatesAPI(MethodView):
         cert = certificates.get(id)
         if not id or not cert:
             abort(404)
-        for x in cert.assign:
-            if not x in data["assign"]:
-                cert.unassign(x["type"], x["name"])
-        for x in data["assign"]:
-            if not x in cert.assign:
-                cert.assign(x["type"], x["name"])
-        return Response(status=201)
+        for x in cert.assigns:
+            if not x in data["assigns"]:
+                cert.unassign(x)
+        for x in data["assigns"]:
+            if not x in cert.assigns:
+                cert.assign(x)
+        return jsonify(cert=cert.as_dict(), message="Certificate updated successfully")
     
     def delete(self, id):
         cert = certificates.get(id)
@@ -108,16 +108,17 @@ class CertificateAuthoritiesAPI(MethodView):
         return Response(status=204)
 
 
-@backend.route('/certs/ssl_able')
+@backend.route('/certassigns')
 def ssl_able():
     assigns = []
     for x in websites.get():
-        assigns.append({"type": "website", "name": x.id})
+        assigns.append({"type": "website", "id": x.id, 
+            "name": x.id if x.meta else x.name})
     for x in applications.get():
-        if x.uses_ssl:
+        if x.type == "app" and x.uses_ssl:
             for y in x.get_ssl_able():
                 assigns.append(y)
-    return jsonify(assigns=assigns)
+    return jsonify(certassigns=assigns)
 
 
 certs_view = CertificatesAPI.as_view('certs_api')
