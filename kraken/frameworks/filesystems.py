@@ -3,6 +3,7 @@ import json
 from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
+from kraken import auth
 from arkos.system import filesystems
 from kraken.messages import Message, push_record
 from kraken.utilities import as_job, job_response
@@ -11,6 +12,7 @@ backend = Blueprint("filesystems", __name__)
 
 
 class DisksAPI(MethodView):
+    @auth.required()
     def get(self, id):
         disks = filesystems.get(id)
         if id and not disks:
@@ -20,6 +22,7 @@ class DisksAPI(MethodView):
         else:
             return jsonify(filesystem=disks.as_dict())
     
+    @auth.required()
     def post(self):
         data = json.loads(request.data)["filesystem"]
         id = as_job(self._post, data)
@@ -45,6 +48,7 @@ class DisksAPI(MethodView):
         message.complete("success", "Virtual disk created successfully")
         push_record("filesystem", disk.as_dict())
     
+    @auth.required()
     def put(self, id):
         data = json.loads(request.data)["filesystem"]
         disk = filesystems.get(id)
@@ -75,6 +79,7 @@ class DisksAPI(MethodView):
             return resp
         return jsonify(filesystem=disk.as_dict(), message="Disk %s successfully"%op)
     
+    @auth.required()
     def delete(self, id):
         disk = filesystems.get(id)
         if not id or not disk:
@@ -84,6 +89,7 @@ class DisksAPI(MethodView):
 
 
 @backend.route('/points')
+@auth.required()
 def list_points():
     return jsonify(points=[x.as_dict() for x in filesystems.get_points()])
 

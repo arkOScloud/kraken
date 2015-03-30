@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 
-from distutils.core import setup
+from setuptools import setup
 
 setup(
     name='kraken',
     version='0.7',
     install_requires=[
-        'redis'
+        'redis',
+        'itsdangerous'
     ],
     description='arkOS REST API',
     author='CitizenWeb',

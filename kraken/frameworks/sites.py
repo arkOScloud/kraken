@@ -3,6 +3,7 @@ import json
 from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
+from kraken import auth
 from arkos import applications, websites, certificates
 from kraken.messages import Message, push_record, remove_record
 from kraken.utilities import as_job, job_response
@@ -11,6 +12,7 @@ backend = Blueprint("websites", __name__)
 
 
 class WebsitesAPI(MethodView):
+    @auth.required()
     def get(self, id):
         if request.args.get("rescan", None):
             websites.scan()
@@ -22,6 +24,7 @@ class WebsitesAPI(MethodView):
         else:
             return jsonify(website=sites.as_dict())
     
+    @auth.required()
     def post(self):
         data = json.loads(request.data)["website"]
         id = as_job(self._post, data)
@@ -43,6 +46,7 @@ class WebsitesAPI(MethodView):
             remove_record("website", data["id"])
             raise
     
+    @auth.required()
     def put(self, id):
         data = json.loads(request.data)["website"]
         site = websites.get(id)
@@ -67,6 +71,7 @@ class WebsitesAPI(MethodView):
         remove_record("website", id)
         return jsonify(message="Site edited successfully")
     
+    @auth.required()
     def delete(self, id):
         id = as_job(self._delete, id, success_code=204)
         return job_response(id)

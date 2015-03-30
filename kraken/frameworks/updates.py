@@ -1,6 +1,7 @@
 from flask import Response, Blueprint, jsonify, request
 from flask.views import MethodView
 
+from kraken import auth
 from arkos import storage, updates
 from kraken.messages import Message, push_record
 from kraken.utilities import as_job, job_response
@@ -9,6 +10,7 @@ backend = Blueprint("updates", __name__)
 
 
 class UpdatesAPI(MethodView):
+    @auth.required()
     def get(self, id):
         ups = []
         data = storage.updates.get("updates")
@@ -20,6 +22,7 @@ class UpdatesAPI(MethodView):
             ups.append({"id": data["id"], "info": data["info"]})
         return jsonify(updates=ups)
     
+    @auth.required()
     def post(self):
         id = as_job(_post)
         return job_response(id)
@@ -30,7 +33,7 @@ class UpdatesAPI(MethodView):
 
 
 updates_view = UpdatesAPI.as_view('updates_api')
-backend.add_url_rule('/updates/', defaults={'id': None}, 
+backend.add_url_rule('/updates', defaults={'id': None}, 
     view_func=updates_view, methods=['GET',])
-backend.add_url_rule('/updates/', view_func=updates_view, methods=['POST',])
+backend.add_url_rule('/updates', view_func=updates_view, methods=['POST',])
 backend.add_url_rule('/updates/<int:id>', view_func=updates_view, methods=['GET',])

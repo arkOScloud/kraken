@@ -3,6 +3,7 @@ import json
 from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
+from kraken import auth
 from arkos import security, tracked_services, websites
 from kraken.messages import Message
 
@@ -10,6 +11,7 @@ backend = Blueprint("security", __name__)
 
 
 class PolicyAPI(MethodView):
+    @auth.required()
     def get(self, id):
         websites.get()
         svcs = tracked_services.get(id)
@@ -20,6 +22,7 @@ class PolicyAPI(MethodView):
         else:
             return jsonify(policy=svcs.as_dict())
     
+    @auth.required()
     def put(self, id):
         data = json.loads(request.data)["policy"]
         policy = tracked_services.get(id)
@@ -31,9 +34,11 @@ class PolicyAPI(MethodView):
 
 
 class DefenceAPI(MethodView):
+    @auth.required()
     def get(self, id):
         return jsonify(jails=security.get_defense_rules())
     
+    @auth.required()
     def put(self, id):
         data = json.loads(request.data)["jail"]
         if data["operation"] == "enable":

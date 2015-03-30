@@ -4,6 +4,7 @@ import os
 from flask import Response, Blueprint, abort, jsonify, request, send_from_directory
 from flask.views import MethodView
 
+from kraken import auth
 from arkos import applications
 from kraken.messages import Message, push_record
 from kraken.utilities import as_job, job_response
@@ -12,6 +13,7 @@ backend = Blueprint("apps", __name__)
 
 
 class ApplicationsAPI(MethodView):
+    @auth.required()
     def get(self, id):
         if request.args.get("rescan", None):
             applications.scan()
@@ -25,6 +27,7 @@ class ApplicationsAPI(MethodView):
         else:
             return jsonify(app=apps.as_dict())
     
+    @auth.required()
     def put(self, id):
         operation = json.loads(request.data)["app"]["operation"]
         app = applications.get(id)
@@ -77,6 +80,7 @@ backend.add_url_rule('/apps/<string:id>', view_func=apps_view,
     methods=['GET', 'PUT', 'DELETE'])
 
 @backend.route('/apps/logo/<string:id>')
+@auth.required()
 def get_app_logo(id):
     app = applications.get(id)
     if not app:

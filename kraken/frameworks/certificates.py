@@ -3,6 +3,7 @@ import json
 from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
+from kraken import auth
 from arkos import certificates, websites, applications
 from kraken.messages import Message, push_record
 from kraken.utilities import as_job, job_response
@@ -11,6 +12,7 @@ backend = Blueprint("certs", __name__)
 
 
 class CertificatesAPI(MethodView):
+    @auth.required()
     def get(self, id):
         if request.args.get("rescan", None):
             certificates.scan()
@@ -22,6 +24,7 @@ class CertificatesAPI(MethodView):
         else:
             return jsonify(cert=certs.as_dict())
     
+    @auth.required()
     def post(self):
         if request.headers.get('Content-Type').startswith("application/json"):
             data = json.loads(request.data)["cert"]
@@ -60,6 +63,7 @@ class CertificatesAPI(MethodView):
             message.complete("error", "Certificate could not be uploaded: %s" % str(e))
             raise
     
+    @auth.required()
     def put(self, id):
         data = json.loads(request.data)["cert"]
         cert = certificates.get(id)
@@ -73,6 +77,7 @@ class CertificatesAPI(MethodView):
                 cert.assign(x)
         return jsonify(cert=cert.as_dict(), message="Certificate updated successfully")
     
+    @auth.required()
     def delete(self, id):
         cert = certificates.get(id)
         if not id or not cert:
@@ -82,6 +87,7 @@ class CertificatesAPI(MethodView):
 
 
 class CertificateAuthoritiesAPI(MethodView):
+    @auth.required()
     def get(self, id):
         if request.args.get("rescan", None):
             certificates.get_authorities()
@@ -100,6 +106,7 @@ class CertificateAuthoritiesAPI(MethodView):
         else:
             return jsonify(certauth=certs.as_dict())
     
+    @auth.required()
     def delete(self, id):
         cert = certificates.get_authorities(id)
         if not id or not cert:
@@ -109,6 +116,7 @@ class CertificateAuthoritiesAPI(MethodView):
 
 
 @backend.route('/certassigns')
+@auth.required()
 def ssl_able():
     assigns = []
     for x in websites.get():

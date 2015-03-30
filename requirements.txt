@@ -1,0 +1,16 @@
+flask
+GitPython
+itsdangerous
+netifaces
+ntplib
+passlib
+psutil
+pycryptsetup
+pyOpenSSL
+pyparted
+python-gnupg
+python-iptables
+python-ldap
+python-nginx
+python-pacman
+redis

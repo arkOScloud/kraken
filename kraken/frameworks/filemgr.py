@@ -8,6 +8,7 @@ import stat
 
 from arkos.utilities import b64_to_path, path_to_b64, compress, extract, str_fperms
 
+from kraken import auth
 from flask import Response, Blueprint, jsonify, request, abort
 from flask.views import MethodView
 from kraken.utilities import as_job, job_response
@@ -16,6 +17,7 @@ backend = Blueprint("filemgr", __name__)
 
 
 class FileManagerAPI(MethodView):
+    @auth.required()
     def get(self, path):
         path = b64_to_path(path)
         if not path or not os.path.exists(path):
@@ -44,6 +46,7 @@ class FileManagerAPI(MethodView):
         else:
             return jsonify(file=as_dict(path))
     
+    @auth.required()
     def post(self, path):
         path = b64_to_path(path)
         if not os.path.exists(path):
@@ -79,6 +82,7 @@ class FileManagerAPI(MethodView):
                     f.write("")
             return jsonify(file=as_dict(os.path.join(path, data["name"])))
     
+    @auth.required()
     def put(self, path):
         data = json.loads(request.data)["file"]
         if not os.path.exists(data["path"]):
@@ -99,6 +103,7 @@ class FileManagerAPI(MethodView):
         else:
             abort(422)
     
+    @auth.required()
     def delete(self, path):
         path = b64_to_path(path)
         if not os.path.exists(path):

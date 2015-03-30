@@ -3,12 +3,14 @@ import json
 from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
+from kraken import auth
 from arkos.system import users, groups, domains
 
 backend = Blueprint("roles", __name__)
 
 
 class UsersAPI(MethodView):
+    @auth.required()
     def get(self, id):
         u = users.get(id)
         if id and not u:
@@ -18,6 +20,7 @@ class UsersAPI(MethodView):
         else:
             return jsonify(user=u.as_dict())
     
+    @auth.required()
     def post(self):
         data = json.loads(request.data)["user"]
         try:
@@ -31,6 +34,7 @@ class UsersAPI(MethodView):
             return resp
         return jsonify(user=u.as_dict(), message="User %s added successfully" % str(u.name))
     
+    @auth.required()
     def put(self, id):
         data = json.loads(request.data)["user"]
         u = users.get(id)
@@ -49,6 +53,7 @@ class UsersAPI(MethodView):
             return resp
         return jsonify(user=u.as_dict(), message="User %s updated successfully" % u.name)
     
+    @auth.required()
     def delete(self, id):
         u = users.get(id)
         if not u:
@@ -63,6 +68,7 @@ class UsersAPI(MethodView):
 
 
 class GroupsAPI(MethodView):
+    @auth.required()
     def get(self, id):
         g = groups.get(id)
         if id and not g:
@@ -72,6 +78,7 @@ class GroupsAPI(MethodView):
         else:
             return jsonify(group=g.as_dict())
     
+    @auth.required()
     def post(self):
         data = json.loads(request.data)["group"]
         g = groups.Group(name=data["name"], users=data["users"])
@@ -83,6 +90,7 @@ class GroupsAPI(MethodView):
             return resp
         return jsonify(group=g.as_dict(), message="Group %s added successfully" % str(g.name))
     
+    @auth.required()
     def put(self, id):
         data = json.loads(request.data)["group"]
         g = groups.get(id)
@@ -97,6 +105,7 @@ class GroupsAPI(MethodView):
             return resp
         return jsonify(group=g.as_dict(), message="Group %s updated successfully" % g.name)
     
+    @auth.required()
     def delete(self, id):
         g = groups.get(id)
         if not g:
@@ -111,6 +120,7 @@ class GroupsAPI(MethodView):
 
 
 class DomainsAPI(MethodView):
+    @auth.required()
     def get(self, id):
         d = domains.get(id)
         if id and not d:
@@ -120,6 +130,7 @@ class DomainsAPI(MethodView):
         else:
             return jsonify(domain=d.as_dict())
     
+    @auth.required()
     def post(self):
         data = json.loads(request.data)["domain"]
         d = domains.Domain(name=data["id"])
@@ -131,6 +142,7 @@ class DomainsAPI(MethodView):
             return resp
         return jsonify(domain=d.as_dict(), message="Domain %s added successfully" % str(d.name))
     
+    @auth.required()
     def delete(self, id):
         d = domains.get(id)
         if not d:

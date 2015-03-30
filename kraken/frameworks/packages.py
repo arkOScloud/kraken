@@ -3,6 +3,8 @@ import pacman
 
 from flask import Response, Blueprint, jsonify, request, abort
 from flask.views import MethodView
+
+from kraken import auth
 from kraken.utilities import as_job, job_response
 from kraken.messages import Message, push_record, remove_record
 
@@ -10,6 +12,7 @@ backend = Blueprint("packages", __name__)
 
 
 class PackagesAPI(MethodView):
+    @auth.required()
     def get(self, id):
         if id:
             try:
@@ -20,6 +23,7 @@ class PackagesAPI(MethodView):
         else:
             return jsonify(packages=pacman.get_all())
     
+    @auth.required()
     def post(self):
         install, remove = [], []
         data = json.loads(request.data)["packages"]

@@ -1,5 +1,6 @@
 import json
 
+from kraken import auth
 from flask import Blueprint, jsonify, abort
 from arkos.utilities import random_string
 from redis_storage import storage
@@ -27,6 +28,7 @@ class Message:
 
 
 @backend.route('/genesis')
+@auth.required()
 def get_messages():
     messages = storage.get_list("genesis:messages")
     _pushes = storage.get_list("genesis:pushes")
@@ -42,6 +44,7 @@ def get_messages():
     return jsonify(messages=messages, pushes=pushes, purges=purges)
 
 @backend.route('/job')
+@auth.required()
 def get_jobs():
     jobs = []
     for x in storage.scan("job"):
@@ -49,6 +52,7 @@ def get_jobs():
     return jsonify(jobs=jobs)
 
 @backend.route('/job/<string:id>')
+@auth.required()
 def get_job(id):
     job = storage.get_all("job:%s" % id)
     if not job:

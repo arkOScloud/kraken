@@ -3,12 +3,14 @@ import json
 from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
+from kraken import auth
 from arkos.system import network
 
 backend = Blueprint("networks", __name__)
 
 
 class NetworksAPI(MethodView):
+    @auth.required()
     def get(self, id):
         nets = network.get_connections(id)
         if id and not nets:
@@ -18,12 +20,14 @@ class NetworksAPI(MethodView):
         else:
             return jsonify(network=nets.as_dict())
     
+    @auth.required()
     def post(self):
         data = json.loads(request.data)["network"]
         net = network.Connection(id=data["id"], config=data["config"])
         net.add()
         return jsonify(network=net.as_dict())
     
+    @auth.required()
     def put(self, id):
         data = json.loads(request.data)["network"]
         net = network.get_connections(id)
@@ -50,6 +54,7 @@ class NetworksAPI(MethodView):
             net.update()
         return jsonify(network=net.as_dict())
     
+    @auth.required()
     def delete(self, id):
         net = network.get_connections(id)
         if not id or not net:
@@ -60,6 +65,7 @@ class NetworksAPI(MethodView):
 
 @backend.route('/system/netifaces', defaults={'id': None})
 @backend.route('/system/netifaces/<string:id>')
+@auth.required()
 def get_netifaces(id):
     ifaces = network.get_interfaces(id)
     if id and not ifaces:

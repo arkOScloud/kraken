@@ -4,6 +4,7 @@ import json
 from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
+from kraken import auth
 from arkos import backup
 from kraken.messages import Message, push_record
 from kraken.utilities import as_job, job_response
@@ -12,6 +13,7 @@ backend = Blueprint("backup", __name__)
 
 
 class BackupsAPI(MethodView):
+    @auth.required()
     def get(self, id, time):
         backups = backup.get()
         if id and time and backups:
@@ -22,6 +24,7 @@ class BackupsAPI(MethodView):
             abort(404)
         return jsonify(backups=backups)
     
+    @auth.required()
     def post(self, id, time):
         id = as_job(self._post, id)
         return job_response(id)
@@ -36,6 +39,7 @@ class BackupsAPI(MethodView):
         except Exception, e:
             message.complete("error", "%s could not be backed up: %s" % (id, str(e)))
     
+    @auth.required()
     def put(self, id, time):
         data = json.loads(request.data).get("backup")
         data["id"] = id+"/"+time
@@ -55,12 +59,14 @@ class BackupsAPI(MethodView):
         except Exception, e:
             message.complete("error", "%s could not be restored: %s" % (data["pid"], str(e)))
     
+    @auth.required()
     def delete(self, id, time):
         backup.remove(id, time)
         return Response(status=204)
 
 
 @backend.route('/backups/types')
+@auth.required()
 def get_possible():
     return jsonify(types=backup.get_able())
 

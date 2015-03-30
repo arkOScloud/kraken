@@ -3,6 +3,7 @@ import json
 from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
+from kraken import auth
 from arkos.system import services
 from kraken.messages import Message
 
@@ -10,6 +11,7 @@ backend = Blueprint("services", __name__)
 
 
 class ServicesAPI(MethodView):
+    @auth.required()
     def get(self, id):
         svcs = services.get(id)
         if id and not svcs:
@@ -19,12 +21,14 @@ class ServicesAPI(MethodView):
         else:
             return jsonify(service=svcs.as_dict())
     
+    @auth.required()
     def post(self):
         data = json.loads(request.data)["service"]
         svc = services.Service(name=data["id"], cfg=data["cfg"])
         svc.add()
         return jsonify(service=svc.as_dict())
     
+    @auth.required()
     def put(self, id):
         data = json.loads(request.data)["service"]
         svc = services.get(id)
@@ -57,6 +61,7 @@ class ServicesAPI(MethodView):
             return resp
         return jsonify(service=svc.as_dict())
     
+    @auth.required()
     def delete(self, id):
         svc = services.get(id)
         if id and not svc:

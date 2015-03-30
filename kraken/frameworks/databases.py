@@ -3,6 +3,7 @@ import json
 from flask import make_response, Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
+from kraken import auth
 from arkos import databases
 from kraken.messages import push_record
 
@@ -10,6 +11,7 @@ backend = Blueprint("databases", __name__)
 
 
 class DatabasesAPI(MethodView):
+    @auth.required()
     def get(self, id):
         if request.args.get("rescan", None):
             databases.scan()
@@ -27,6 +29,7 @@ class DatabasesAPI(MethodView):
         else:
             return jsonify(database=dbs.as_dict())
     
+    @auth.required()
     def post(self):
         data = json.loads(request.data)["database"]
         manager = databases.get_managers(data["type"])
@@ -38,6 +41,7 @@ class DatabasesAPI(MethodView):
             return resp
         return jsonify(database=db.as_dict(), message="Database %s added successfully" % str(db.id))
     
+    @auth.required()
     def put(self, id):
         data = json.loads(request.data)["database"]
         db = databases.get(id)
@@ -51,6 +55,7 @@ class DatabasesAPI(MethodView):
             result = str(e)
         return jsonify(database={"id": db.id, "result": result})
     
+    @auth.required()
     def delete(self, id):
         db = databases.get(id)
         if not id or not db:
@@ -65,6 +70,7 @@ class DatabasesAPI(MethodView):
 
 
 class DatabaseUsersAPI(MethodView):
+    @auth.required()
     def get(self, id):
         if request.args.get("rescan", None):
             databases.scan_users()
@@ -76,6 +82,7 @@ class DatabaseUsersAPI(MethodView):
         else:
             return jsonify(database_user=u.as_dict())
     
+    @auth.required()
     def post(self):
         data = json.loads(request.data)["database_user"]
         manager = databases.get_managers(data["type"])
@@ -87,6 +94,7 @@ class DatabaseUsersAPI(MethodView):
             return resp
         return jsonify(database_user=u.as_dict(), message="Database user %s added successfully" % str(u.id))
     
+    @auth.required()
     def put(self, id):
         data = json.loads(request.data)["database_user"]
         u = databases.get_user(id)
@@ -98,6 +106,7 @@ class DatabaseUsersAPI(MethodView):
         push_record("database_users", u.as_dict())
         return Response(status=201)
     
+    @auth.required()
     def delete(self, id):
         u = databases.get_user(id)
         if not id or not u:
@@ -112,6 +121,7 @@ class DatabaseUsersAPI(MethodView):
 
 
 @backend.route('/database_types')
+@auth.required()
 def list_types():
     dbs = databases.get_managers()
     if request.args.get("rescan", None):
