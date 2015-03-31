@@ -6,11 +6,13 @@ import pwd
 import shutil
 import stat
 
-from arkos.utilities import b64_to_path, path_to_b64, compress, extract, str_fperms
+from arkos import shared_files
+from arkos.utilities import b64_to_path, path_to_b64, compress, extract, str_fperms, random_string
 
 from kraken import auth
 from flask import Response, Blueprint, jsonify, request, abort
 from flask.views import MethodView
+from kraken.messages import remove_record
 from kraken.utilities import as_job, job_response
 
 backend = Blueprint("filemgr", __name__)
@@ -22,22 +24,6 @@ class FileManagerAPI(MethodView):
         path = b64_to_path(path)
         if not path or not os.path.exists(path):
             abort(404)
-        if request.args.get("download", None):
-            if os.path.isdir(path):
-                apath = compress(path, format="zip")
-                with open(apath, "r") as f:
-                    data = f.read()
-                resp = Response(data, mimetype="application/octet-stream")
-                resp.headers["Content-Length"] = os.path.getsize(apath)
-                resp.headers["Content-Disposition"] = "attachment; filename=%s" % os.path.basename(apath)
-                return resp
-            else: 
-                with open(path, "r") as f:
-                    data = f.read()
-                resp = Response(data, mimetype="application/octet-stream")
-                resp.headers["Content-Length"] = str(len(data.encode('utf-8')))
-                resp.headers["Content-Disposition"] = "attachment; filename=%s" % os.path.basename(path)
-                return resp
         if os.path.isdir(path):
             data = []
             for x in os.listdir(path):
@@ -118,6 +104,78 @@ class FileManagerAPI(MethodView):
             return Response(status=204)
         except:
             abort(404)
+
+
+class SharingAPI(MethodView):
+    @auth.required()
+    def get(self, id):
+        shares = shared_files.get(id)
+        if id and not shares:
+            abort(404)
+        if type(shares) == list:
+            return jsonify(shares=[x.as_dict() for x in shares])
+        else:
+            return jsonify(share=shares.as_dict())
+    
+    @auth.required()
+    def post(self):
+        data = request.get_json()["share"]
+        id = random_string()
+        share = shared_files.Share(id, data["path"], data.get("expires", 0))
+        share.add()
+        return jsonify(share=share.as_dict())
+    
+    @auth.required()
+    def put(self, id):
+        share = shared_files.get(id)
+        if id and not share:
+            abort(404)
+        data = request.get_json()["share"]
+        if data["expires"]:
+            share.update_expiry(data["expires_at"])
+        else:
+            share.update_expiry(False)
+        return jsonify(share=share.as_dict())
+    
+    @auth.required()
+    def delete(self, id):
+        item = shared_files.get(id)
+        if not item:
+            abort(404)
+        item.delete()
+        return Response(status=204)
+
+
+@backend.route("/shared/<string:id>", methods=["GET",])
+def download(id):
+    item = shared_files.get(id)
+    if not item:
+        abort(404)
+    if item.is_expired():
+        item.delete()
+        resp = jsonify(message="The requested item has expired")
+        resp.status_code = 410
+        return resp
+    if item.expires == 0:
+        item.delete()
+        remove_record("share", item.id)
+    path = item.path
+    item.fetch_count += 1
+    if os.path.isdir(path):
+        apath = compress(path, format="zip")
+        with open(apath, "r") as f:
+            data = f.read()
+        resp = Response(data, mimetype="application/octet-stream")
+        resp.headers["Content-Length"] = os.path.getsize(apath)
+        resp.headers["Content-Disposition"] = "attachment; filename=%s" % os.path.basename(apath)
+        return resp
+    else: 
+        with open(path, "r") as f:
+            data = f.read()
+        resp = Response(data, mimetype="application/octet-stream")
+        resp.headers["Content-Length"] = str(len(data.encode('utf-8')))
+        resp.headers["Content-Disposition"] = "attachment; filename=%s" % os.path.basename(path)
+        return resp
 
 
 def as_dict(path):
@@ -205,3 +263,9 @@ def guess_file_icon(name):
 filemgr_view = FileManagerAPI.as_view('filemgr_api')
 backend.add_url_rule('/files/<string:path>', view_func=filemgr_view, 
     methods=['GET', 'POST', 'PUT', 'DELETE'])
+shares_view = SharingAPI.as_view('sharing_api')
+backend.add_url_rule('/shares', defaults={"id": None}, view_func=shares_view, 
+    methods=['GET',])
+backend.add_url_rule('/shares', view_func=shares_view, methods=['POST',])
+backend.add_url_rule('/shares/<string:id>', view_func=shares_view, 
+    methods=['GET', 'PUT', 'DELETE'])

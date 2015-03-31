@@ -13,6 +13,10 @@ class AnonymousUser:
         self.name = "anonymous"
         self.first_name = "Anonymous"
         self.last_name = ""
+        self.admin = True
+    
+    def verify_passwd(self, passwd):
+        return True
 
 
 def create_token(user):
@@ -64,7 +68,7 @@ def verify():
         return resp
     except BadSignature:
         resp = jsonify(message="Malformed token signature")
-        resp.status_code = 400
+        resp.status_code = 401
         return resp
     user = users.get(name=payload["uid"])
     if not user or not user.admin:
@@ -91,7 +95,11 @@ def get_token():
         user = AnonymousUser()
     else:
         user = users.get(name=user)
-    if user and user.verify_passwd(pwd):
+    if user and not user.admin:
+        resp = jsonify(message="Not an admin user")
+        resp.status_code = 401
+        return resp
+    elif user and user.verify_passwd(pwd):
         return jsonify(token=create_token(user))
     else:
         resp = jsonify(message="Invalid credentials")

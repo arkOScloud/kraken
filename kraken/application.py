@@ -89,7 +89,7 @@ def add_cors(resp):
     resp.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin','*')
     resp.headers['Access-Control-Allow-Credentials'] = 'true'
     resp.headers['Access-Control-Allow-Methods'] = 'PUT, POST, OPTIONS, GET, DELETE'
-    resp.headers['Access-Control-Allow-Headers'] = 'Origin, X-Requested-With, Accept, DNT, Cache-Control, Accept-Encoding, Content-Type'
+    resp.headers['Access-Control-Allow-Headers'] = 'Authorization, Origin, X-Requested-With, Accept, DNT, Cache-Control, Accept-Encoding, Content-Type'
     # set low for debugging
     if app.debug:
         resp.headers['Access-Control-Max-Age'] = '1'
