@@ -7,6 +7,7 @@ import shutil
 import stat
 
 from arkos import shared_files
+from arkos.system import users, groups
 from arkos.utilities import b64_to_path, path_to_b64, compress, extract, str_fperms, random_string
 
 from kraken import auth
@@ -30,7 +31,7 @@ class FileManagerAPI(MethodView):
                 data.append(as_dict(os.path.join(path, x)))
             return jsonify(files=data)
         else:
-            return jsonify(file=as_dict(path))
+            return jsonify(file=as_dict(path, content=request.args.get("content", False)))
     
     @auth.required()
     def post(self, path):
@@ -86,6 +87,42 @@ class FileManagerAPI(MethodView):
         elif data["operation"] == "edit":
             with open(data["path"], "w") as f:
                 f.write(data["data"])
+            return jsonify(file=as_dict(data["path"]))
+        elif data["operation"] == "props":
+            orig = as_dict(data["path"])
+            if data["user"] != orig["user"] or data["group"] != orig["group"]:
+                uid, gid = None, None
+                u, g = users.get_system(data["user"]), groups.get_system(data["group"])
+                if data["user"] == "root":
+                    uid = 0
+                if data["group"] == "root":
+                    gid = 0
+                if u and g:
+                    uid, gid = u.uid, g.gid
+                if uid == None or gid == None:
+                    resp = jsonify(message="Invalid user/group specification")
+                    resp.status_code = 422
+                    return resp
+                if data["folder"]:
+                    os.chown(data["path"], uid, gid)
+                    for r, d, f in os.walk(data["path"]):
+                        for x in d:
+                            os.chown(os.path.join(r, x), uid, gid)
+                        for x in f:
+                            os.chown(os.path.join(r, x), uid, gid)
+                else:
+                    os.chown(data["path"], u.uid, g.gid)
+            if data["perms"]["oct"] != orig["perms"]["oct"]:
+                if data["folder"]:
+                    os.chmod(data["path"], int(data["perms"]["oct"][1:], 8))
+                    for r, d, f in os.walk(data["path"]):
+                        for x in d:
+                            os.chmod(os.path.join(r, x), int(data["perms"]["oct"][1:], 8))
+                        for x in f:
+                            os.chmod(os.path.join(r, x), int(data["perms"]["oct"][1:], 8))
+                else:
+                    os.chmod(data["path"], int(data["perms"]["oct"][1:], 8))
+            return jsonify(file=as_dict(data["path"]))
         else:
             abort(422)
     
@@ -178,7 +215,7 @@ def download(id):
         return resp
 
 
-def as_dict(path):
+def as_dict(path, content=False):
     name = os.path.basename(path)
     data = {"id": path_to_b64(path), "name": name, "path": path, "folder": False, 
         "hidden": name.startswith(".")}
@@ -235,6 +272,9 @@ def as_dict(path):
         data["binary"] = False
     data["mimetype"] = mimetypes.guess_type(path)[0]
     data["selected"] = False
+    if content:
+        with open(path, "r") as f:
+            data["content"] = f.read()
     return data
 
 def guess_file_icon(name):
@@ -254,7 +294,7 @@ def guess_file_icon(name):
         return "fa-file-archive-o"
     elif name.endswith((".doc", ".docx", ".odt")):
         return "fa-file-word-o"
-    elif name.endswith((".php", ".js", ".py", ".sh", ".html", ".xml", ".rb")):
+    elif name.endswith((".php", ".js", ".py", ".sh", ".html", ".xml", ".rb", ".css")):
         return "fa-file-code-o"
     else:
         return "fa-file-o"

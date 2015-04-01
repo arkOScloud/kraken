@@ -22,13 +22,13 @@ class AnonymousUser:
 def create_token(user):
     iat = systemtime.get_unix_time()
     try:
-        offset = systemtime.get_offset(update=False)
+        offset = systemtime.get_offset()
         if offset < -3600 or offset > 3600:
             systemtime.set_datetime()
             iat = systemtime.get_unix_time()
     except:
+        current_app.logger.warning("System time is not accurate or could not be verified. Access tokens will not expire.")
         iat = None
-        # TODO record the failure for later validation
     payload = {
         "uid": user.name,
         "ufn": user.first_name,
@@ -36,9 +36,10 @@ def create_token(user):
     }
     if iat: 
         payload["iat"] = iat
-        payload["exp"] = iat + 3600
+        payload["exp"] = iat + config.get("genesis", "token_valid_for", 3600)
     tjwss = TimedJSONWebSignatureSerializer(secret_key=current_app.config["SECRET_KEY"],
-        expires_in=3600, algorithm_name="HS256")
+        expires_in=config.get("genesis", "token_valid_for", 3600), 
+        algorithm_name="HS256")
     return tjwss.dumps(payload).decode("utf-8")
 
 def verify():
@@ -110,6 +111,10 @@ def get_token():
 @required()
 def get_refresh_token():
     token = request.headers.get("Authorization", None)
+    if not token:
+        resp = jsonify(message="Authorization required")
+        resp.status_code = 401
+        return resp
     token = token.split()[1]
     tjwss = TimedJSONWebSignatureSerializer(secret_key=current_app.config["SECRET_KEY"],
         expires_in=3600, algorithm_name="HS256")

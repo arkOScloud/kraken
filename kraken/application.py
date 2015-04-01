@@ -5,6 +5,7 @@ import auth
 import genesis
 import messages
 
+import arkos
 from arkos import config, applications, tracked_services
 from arkos.utilities.logs import ConsoleHandler
 from arkos.utilities import *
@@ -27,6 +28,7 @@ def create_app(app, log_level, config_file, debug=False):
         app.logger.setLevel(logging.INFO)
         app.logger.addHandler(stdout)
     
+    arkos.logger.active_logger = app.logger
     app.logger.info('arkOS Kraken %s' % version())
     
     # Open and load configuration

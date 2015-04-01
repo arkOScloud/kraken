@@ -77,7 +77,7 @@ apps_view = ApplicationsAPI.as_view('apps_api')
 backend.add_url_rule('/apps', defaults={'id': None}, 
     view_func=apps_view, methods=['GET',])
 backend.add_url_rule('/apps/<string:id>', view_func=apps_view, 
-    methods=['GET', 'PUT', 'DELETE'])
+    methods=['GET', 'PUT'])
 
 @backend.route('/apps/logo/<string:id>')
 @auth.required()
