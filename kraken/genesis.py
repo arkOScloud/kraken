@@ -46,7 +46,7 @@ def genesis_init(state):
     libpaths = []
     for x in apps:
         genpath = "/var/lib/arkos/applications/%s/genesis" % x.id
-        if x.type == "app" and os.path.exists(genpath):
+        if os.path.exists(genpath):
             libpaths.append("lib/%s"%x.id)
             os.symlink(genpath, os.path.join(path, 'lib', x.id))
     if libpaths:
