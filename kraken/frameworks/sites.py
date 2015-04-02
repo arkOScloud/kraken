@@ -88,6 +88,25 @@ class WebsitesAPI(MethodView):
             raise
 
 
+@backend.route('/websites/actions/<string:id>/<string:action>', methods=["POST",])
+@auth.required()
+def perform_action(id, action):
+    w = websites.get(id)
+    if not w:
+        abort(404)
+    if not hasattr(w, action):
+        abort(422)
+    actionfunc = getattr(w, action)
+    try:
+        actionfunc()
+    except Exception, e:
+        resp = jsonify(message=str(e))
+        resp.status_code = 500
+        return resp
+    finally:
+        return Response(status=200)
+
+
 sites_view = WebsitesAPI.as_view('sites_api')
 backend.add_url_rule('/websites', defaults={'id': None}, 
     view_func=sites_view, methods=['GET',])
