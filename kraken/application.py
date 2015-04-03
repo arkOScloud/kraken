@@ -1,5 +1,7 @@
 import logging
+import platform
 import sys
+import traceback
 
 import auth
 import genesis
@@ -75,11 +77,27 @@ def run_daemon(environment, log_level, config_file):
 
 def make_json_error(err):
     if hasattr(err, "description"):
-        response = jsonify(message=err.description)
+        message = err.description
     else:
-        response = jsonify(message=str(err))
+        message = str(err)
+    if traceback.format_exc():
+        stacktrace = traceback.format_exc()
+        report = "arkOS %s Crash Report\n" % version()
+        report += "--------------------\n\n"
+        report += "Running in %s\n" % config.get("enviro", "run")
+        report += "System: %s\n" % shell("uname -a")["stdout"]
+        report += "Platform: %s %s\n" % (config.get("enviro", "arch"), config.get("enviro", "board"))
+        report += "Python version %s\n" % '.'.join([str(x) for x in platform.python_version_tuple()])
+        report += "Config path: %s\n\n" % config.filename
+        report += "Loaded applicatons: \n%s\n\n" % "\n".join([x.id for x in applications.get()])
+        report += "Request: %s %s\n\n" % (request.method, request.path)
+        report += stacktrace
+        response = jsonify(message=message, stacktrace=stacktrace, 
+            report=report, version=version(), arch=config.get("enviro", "arch"))
+    else:
+        response = jsonify(message=message)
     response.status_code = err.code if isinstance(err, HTTPException) else 500
-    return response
+    return add_cors(response)
 
 
 app = Flask(__name__)
