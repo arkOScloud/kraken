@@ -9,21 +9,24 @@ backend = Blueprint("messages", __name__)
 
 
 class Message:
-    def __init__(self, cls="", msg=""):
+    def __init__(self, cls="", msg="", head=None):
         self.id = random_string()[0:10]
         if cls and msg:
-            data = {"id": self.id, "class": cls, "message": msg, "complete": True}
+            data = {"id": self.id, "class": cls, "message": msg, "headline": head,
+                "complete": True}
         else:
-            data = {"id": self.id, "class": "info", "message": "Please wait...", 
-                "complete": False}
+            data = {"id": self.id, "class": "info", "headline": None,
+                "message": "Please wait...", "complete": False}
         storage.append("genesis:messages", data)
     
-    def update(self, cls, msg):
-        data = {"id": self.id, "class": cls, "message": msg, "complete": False}
+    def update(self, cls, msg, head=None):
+        data = {"id": self.id, "class": cls, "message": msg, "headline": head,
+            "complete": False}
         storage.append("genesis:messages", data)
     
-    def complete(self, cls, msg):
-        data = {"id": self.id, "class": cls, "message": msg, "complete": True}
+    def complete(self, cls, msg, head=None):
+        data = {"id": self.id, "class": cls, "message": msg, "headline": head, 
+            "complete": True}
         storage.append("genesis:messages", data)
 
 

@@ -42,22 +42,23 @@ def create_token(user):
         algorithm_name="HS256")
     return tjwss.dumps(payload).decode("utf-8")
 
-def verify():
+def verify(token=None):
     if config.get("genesis", "anonymous"):
         return
     
-    token = request.headers.get("Authorization", None)
     if not token:
-        resp = jsonify(message="Authorization required")
-        resp.status_code = 401
-        return resp
-    
-    token = token.split()
-    if token[0] != "Bearer" or len(token) > 2:
-        resp = jsonify(message="Malformed token")
-        resp.status_code = 400
-        return resp
-    token = token[1]
+        token = request.headers.get("Authorization", None)
+        if not token:
+            resp = jsonify(message="Authorization required")
+            resp.status_code = 401
+            return resp
+        
+        token = token.split()
+        if token[0] != "Bearer" or len(token) > 2:
+            resp = jsonify(message="Malformed token")
+            resp.status_code = 400
+            return resp
+        token = token[1]
     
     try:
         tjwss = TimedJSONWebSignatureSerializer(secret_key=current_app.config["SECRET_KEY"],
@@ -108,16 +109,19 @@ def get_token():
         return resp
 
 @backend.route("/token/refresh", methods=["POST"])
-@required()
 def get_refresh_token():
-    token = request.headers.get("Authorization", None)
+    token = request.get_json().get("token", None)
     if not token:
         resp = jsonify(message="Authorization required")
         resp.status_code = 401
         return resp
-    token = token.split()[1]
-    tjwss = TimedJSONWebSignatureSerializer(secret_key=current_app.config["SECRET_KEY"],
-        expires_in=3600, algorithm_name="HS256")
-    payload = tjwss.loads(token)
-    user = users.get(name=payload["uid"])
+    v = verify(token)
+    if v: return v
+    if config.get("genesis", "anonymous"):
+        user = AnonymousUser()
+    else:
+        tjwss = TimedJSONWebSignatureSerializer(secret_key=current_app.config["SECRET_KEY"],
+            expires_in=3600, algorithm_name="HS256")
+        payload = tjwss.loads(token)
+        user = users.get(name=payload["uid"])
     return jsonify(token=create_token(user))
