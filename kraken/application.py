@@ -80,7 +80,8 @@ def make_json_error(err):
         message = err.description
     else:
         message = str(err)
-    if traceback.format_exc():
+    if (isinstance(err, HTTPException) and err.code == 500) \
+    or not isinstance(err, HTTPException):
         stacktrace = traceback.format_exc()
         report = "arkOS %s Crash Report\n" % version()
         report += "--------------------\n\n"

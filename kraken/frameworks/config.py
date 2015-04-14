@@ -13,23 +13,16 @@ backend = Blueprint("config", __name__)
 @auth.required()
 def arkos_config():
     if request.method == "PUT":
-        config.config = json.loads(request.data)["config"]
-        config.save()
-    return jsonify(config=config.config)
-
-@backend.route('/config/hostname', methods=["GET", "PUT"])
-@auth.required()
-def hostname():
-    if request.method == "PUT":
-        sysconfig.set_hostname(json.loads(request.data)["hostname"])
-    return jsonify(hostname=sysconfig.get_hostname())
-
-@backend.route('/config/timezone', methods=["GET", "PUT"])
-@auth.required()
-def timezone():
-    if request.method == "PUT":
-        sysconfig.set_timezone(**json.loads(request.data)["timezone"])
-    return jsonify(timezone=sysconfig.get_timezone())
+        data = request.get_json()
+        if data.get("config"):
+            config.config = data["config"]
+            config.save()
+        if data.get("hostname"):
+            sysconfig.set_hostname(data["hostname"])
+        if data.get("timezone"):
+            sysconfig.set_timezone(**data["timezone"])
+    return jsonify(config=config.config, hostname=sysconfig.get_hostname(),
+        timezone=sysconfig.get_timezone())
 
 @backend.route('/config/datetime', methods=["GET", "PUT"])
 @auth.required()
