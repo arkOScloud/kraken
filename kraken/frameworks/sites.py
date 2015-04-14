@@ -37,12 +37,12 @@ class WebsitesAPI(MethodView):
         site = site(data["id"], data["addr"], data["port"])
         try:
             specialmsg = site.install(app, data["extra_data"], True, message)
-            message.complete("success", "%s site installed successfully" % site.meta.name)
+            message.complete("success", "%s site installed successfully" % site.meta.name, head="Installing website")
             if specialmsg:
                 Message("info", specialmsg)
             push_record("website", site.as_dict())
         except Exception, e:
-            message.complete("error", "%s could not be installed: %s" % (data["id"], str(e)))
+            message.complete("error", "%s could not be installed: %s" % (data["id"], str(e)), head="Installing website")
             remove_record("website", data["id"])
             raise
     
@@ -81,10 +81,10 @@ class WebsitesAPI(MethodView):
         site = websites.get(id)
         try:
             site.remove(message)
-            message.complete("success", "%s site removed successfully" % site.meta.name)
+            message.complete("success", "%s site removed successfully" % site.meta.name, head="Removing website")
             remove_record("website", id)
         except Exception, e:
-            message.complete("error", "%s could not be removed: %s" % (id, str(e)))
+            message.complete("error", "%s could not be removed: %s" % (id, str(e)), head="Removing website")
             raise
 
 
