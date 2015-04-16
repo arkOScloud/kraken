@@ -43,6 +43,13 @@ def genesis_init(state):
     genesis_build()
 
 def genesis_build():
+    if config.get("enviro", "run") == "vagrant":
+        path = '/home/vagrant/genesis'
+    elif config.get("enviro", "run") == "dev":
+        sdir = os.path.dirname(os.path.realpath(__file__))
+        path = os.path.abspath(os.path.join(sdir, '../../genesis'))
+    else os.path.exists('/var/lib/arkos/genesis'):
+        path = '/var/lib/arkos/genesis'
     for x in os.listdir(os.path.join(path, 'lib')):
         if os.path.islink(os.path.join(path, 'lib', x)):
             os.unlink(os.path.join(path, 'lib', x))
