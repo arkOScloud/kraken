@@ -40,6 +40,9 @@ def genesis_init(state):
     backend.add_url_rule('/', defaults={'path': None}, view_func=genesis, 
         methods=['GET',])
     backend.add_url_rule('/<path:path>', view_func=genesis, methods=['GET',])
+    genesis_build()
+
+def genesis_build():
     for x in os.listdir(os.path.join(path, 'lib')):
         if os.path.islink(os.path.join(path, 'lib', x)):
             os.unlink(os.path.join(path, 'lib', x))
@@ -62,5 +65,6 @@ def genesis_init(state):
     os.chdir(mydir)
     if s["code"] != 0:
         raise Exception("Genesis rebuild process failed")
+
 
 backend.record(genesis_init)

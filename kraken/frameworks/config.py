@@ -1,6 +1,4 @@
-import json
-
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, Response
 
 from kraken import auth
 from arkos import config
@@ -9,7 +7,7 @@ from arkos.system import sysconfig, systemtime
 backend = Blueprint("config", __name__)
 
 
-@backend.route('/config', methods=["GET", "PUT"])
+@backend.route('/config', methods=["GET", "PUT", "PATCH"])
 @auth.required()
 def arkos_config():
     if request.method == "PUT":
@@ -21,6 +19,15 @@ def arkos_config():
             sysconfig.set_hostname(data["hostname"])
         if data.get("timezone"):
             sysconfig.set_timezone(**data["timezone"])
+    elif request.method == "PATCH":
+        data = request.get_json()
+        for x in data.get("config"):
+            if type(data["config"][x]) == str:
+                config.config[x] = data["config"][x]
+            else:
+                for y in data["config"][x]:
+                    config.config[x][y] = data["config"][x][y]
+        config.save() 
     return jsonify(config=config.config, hostname=sysconfig.get_hostname(),
         timezone=sysconfig.get_timezone())
 

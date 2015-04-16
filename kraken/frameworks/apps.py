@@ -34,6 +34,8 @@ class ApplicationsAPI(MethodView):
         if not app:
             abort(404)
         if operation == "install":
+            if app.installed: 
+                return jsonify(app=app.as_dict())
             id = as_job(self._install, app)
         elif operation == "uninstall":
             if not app.installed:
