@@ -24,11 +24,11 @@ def create_app(app, log_level, config_file, debug=False):
     # Customize logging format
     if not debug:
         stdout = ConsoleHandler(sys.stdout, debug)
-        stdout.setLevel(logging.INFO)
+        stdout.setLevel(log_level)
         dformatter = logging.Formatter('%(asctime)s [%(levelname)s] %(module)s: %(message)s')
         stdout.setFormatter(dformatter)
-        app.logger.setLevel(logging.INFO)
         app.logger.addHandler(stdout)
+    app.logger.setLevel(log_level)
     
     arkos.logger.active_logger = app.logger
     app.logger.info('arkOS Kraken %s' % version())
