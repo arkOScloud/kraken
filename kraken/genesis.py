@@ -7,9 +7,9 @@ from arkos.utilities import shell
 from flask import Blueprint, jsonify, send_from_directory
 
 backend = Blueprint("genesis", __name__)
+DEBUG = False
 
 
-@auth.required()
 def genesis(path):
     if config.get("enviro", "run") == "vagrant":
         if os.path.exists('/home/vagrant/genesis/dist'):
@@ -68,7 +68,7 @@ def genesis_build():
                 indent=2, separators=(',', ': ')))
     mydir = os.getcwd()
     os.chdir(path)
-    s = shell("ember build")
+    s = shell("ember build%s" % (" -prod" if DEBUG else ""))
     os.chdir(mydir)
     if s["code"] != 0:
         raise Exception("Genesis rebuild process failed")

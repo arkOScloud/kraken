@@ -48,7 +48,7 @@ def create_app(app, log_level, config_file, debug=False):
     return app
 
 def run_daemon(environment, log_level, config_file):
-    create_app(app, log_level, config_file, True)
+    create_app(app, log_level, config_file, environment in ["dev", "vagrant"])
     app.conf.set("enviro", "run", environment)
     app.logger.info('Environment: %s' % environment)
     
@@ -66,6 +66,7 @@ def run_daemon(environment, log_level, config_file):
     register_frameworks(app)
 
     app.logger.info("Initializing Genesis (if present)...")
+    genesis.DEBUG = environment in ["dev", "vagrant"]
     app.register_blueprint(genesis.backend)
     
     tracked_services.initialize()

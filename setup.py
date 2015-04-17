@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 
-from setuptools import setup
+from setuptools import setup, find_packages
+
 
 setup(
-    name='kraken',
-    version='0.7',
+    name='arkos-kraken',
+    version='0.7.0beta1',
     install_requires=[
         'redis',
         'itsdangerous'
@@ -13,5 +14,5 @@ setup(
     author='CitizenWeb',
     author_email='jacob@citizenweb.io',
     url='http://arkos.io/',
-    packages=["kraken"]
+    packages=find_packages()
 )

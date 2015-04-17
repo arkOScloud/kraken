@@ -46,11 +46,8 @@ if __name__ == '__main__':
         sys.exit(2)
 
     action = 'run'
+    environment = 'prod'
     os.environ['XTABLES_LIBDIR'] = '/usr/lib/iptables'
-    
-    # TODO remove me
-    environment = "dev"
-    config_file = "/root/core/settings.json"
 
     for o, a in opts:
         if o in ('-h', '--help'):
