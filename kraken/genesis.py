@@ -27,7 +27,6 @@ def genesis(path):
 
 def genesis_init(state):
     path = ""
-    apps = applications.get()
     if config.get("enviro", "run") == "vagrant":
         path = '/home/vagrant/genesis'
     elif config.get("enviro", "run") == "dev":
@@ -54,6 +53,7 @@ def genesis_build():
         if os.path.islink(os.path.join(path, 'lib', x)):
             os.unlink(os.path.join(path, 'lib', x))
     libpaths = []
+    apps = applications.get()
     for x in apps:
         genpath = "/var/lib/arkos/applications/%s/genesis" % x.id
         if os.path.exists(genpath):
