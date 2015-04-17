@@ -49,6 +49,8 @@ def genesis_build():
         path = os.path.abspath(os.path.join(sdir, '../../genesis'))
     else:
         path = '/var/lib/arkos/genesis'
+    if not os.path.exists(os.path.join(path, 'lib')):
+        os.makedirs(os.path.join(path, 'lib'))
     for x in os.listdir(os.path.join(path, 'lib')):
         if os.path.islink(os.path.join(path, 'lib', x)):
             os.unlink(os.path.join(path, 'lib', x))
