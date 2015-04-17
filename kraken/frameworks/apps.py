@@ -75,11 +75,23 @@ class ApplicationsAPI(MethodView):
             raise
 
 
+@auth.required()
+def dispatcher(id, path):
+    a = applications.get(id)
+    if not a or not hasattr(a, "_api"):
+        abort(404)
+    params = path.split("/")
+    fn = getattr(a._api, params[0])
+    return fn(*params[1:])
+
+
 apps_view = ApplicationsAPI.as_view('apps_api')
 backend.add_url_rule('/apps', defaults={'id': None}, 
     view_func=apps_view, methods=['GET',])
 backend.add_url_rule('/apps/<string:id>', view_func=apps_view, 
     methods=['GET', 'PUT'])
+backend.add_url_rule('/apps/<string:id>/<path:path>', view_func=dispatcher, 
+    methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE'])
 
 @backend.route('/apps/logo/<string:id>')
 @auth.required()
