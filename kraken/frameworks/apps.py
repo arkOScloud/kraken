@@ -86,14 +86,14 @@ def dispatcher(id, path):
 
 
 apps_view = ApplicationsAPI.as_view('apps_api')
-backend.add_url_rule('/apps', defaults={'id': None}, 
+backend.add_url_rule('/api/apps', defaults={'id': None}, 
     view_func=apps_view, methods=['GET',])
-backend.add_url_rule('/apps/<string:id>', view_func=apps_view, 
+backend.add_url_rule('/api/apps/<string:id>', view_func=apps_view, 
     methods=['GET', 'PUT'])
-backend.add_url_rule('/apps/<string:id>/<path:path>', view_func=dispatcher, 
+backend.add_url_rule('/api/apps/<string:id>/<path:path>', view_func=dispatcher, 
     methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE'])
 
-@backend.route('/apps/logo/<string:id>')
+@backend.route('/api/apps/logo/<string:id>')
 @auth.required()
 def get_app_logo(id):
     app = applications.get(id)

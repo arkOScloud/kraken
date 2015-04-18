@@ -11,6 +11,8 @@ DEBUG = False
 
 
 def genesis(path):
+    if path and not path.startswith(("assets", "public", "fonts", "img")):
+        path = None
     if config.get("enviro", "run") == "vagrant":
         if os.path.exists('/home/vagrant/genesis/dist'):
             return send_from_directory('/home/vagrant/genesis/dist', path or 'index.html')

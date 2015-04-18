@@ -120,7 +120,7 @@ class DatabaseUsersAPI(MethodView):
         return Response(status=204)
 
 
-@backend.route('/database_types')
+@backend.route('/api/database_types')
 @auth.required()
 def list_types():
     dbs = databases.get_managers()
@@ -130,15 +130,15 @@ def list_types():
 
 
 dbs_view = DatabasesAPI.as_view('dbs_api')
-backend.add_url_rule('/databases', defaults={'id': None}, 
+backend.add_url_rule('/api/databases', defaults={'id': None}, 
     view_func=dbs_view, methods=['GET',])
-backend.add_url_rule('/databases', view_func=dbs_view, methods=['POST',])
-backend.add_url_rule('/databases/<string:id>', view_func=dbs_view, 
+backend.add_url_rule('/api/databases', view_func=dbs_view, methods=['POST',])
+backend.add_url_rule('/api/databases/<string:id>', view_func=dbs_view, 
     methods=['GET', 'PUT', 'DELETE'])
 
 dbusers_view = DatabaseUsersAPI.as_view('db_users_api')
-backend.add_url_rule('/database_users', defaults={'id': None}, 
+backend.add_url_rule('/api/database_users', defaults={'id': None}, 
     view_func=dbusers_view, methods=['GET',])
-backend.add_url_rule('/database_users', view_func=dbusers_view, methods=['POST',])
-backend.add_url_rule('/database_users/<string:id>', view_func=dbusers_view, 
+backend.add_url_rule('/api/database_users', view_func=dbusers_view, methods=['POST',])
+backend.add_url_rule('/api/database_users/<string:id>', view_func=dbusers_view, 
     methods=['GET', 'PUT', 'DELETE'])

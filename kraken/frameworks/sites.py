@@ -88,7 +88,7 @@ class WebsitesAPI(MethodView):
             raise
 
 
-@backend.route('/websites/actions/<string:id>/<string:action>', methods=["POST",])
+@backend.route('/api/websites/actions/<string:id>/<string:action>', methods=["POST",])
 @auth.required()
 def perform_action(id, action):
     w = websites.get(id)
@@ -108,8 +108,8 @@ def perform_action(id, action):
 
 
 sites_view = WebsitesAPI.as_view('sites_api')
-backend.add_url_rule('/websites', defaults={'id': None}, 
+backend.add_url_rule('/api/websites', defaults={'id': None}, 
     view_func=sites_view, methods=['GET',])
-backend.add_url_rule('/websites', view_func=sites_view, methods=['POST',])
-backend.add_url_rule('/websites/<string:id>', view_func=sites_view, 
+backend.add_url_rule('/api/websites', view_func=sites_view, methods=['POST',])
+backend.add_url_rule('/api/websites/<string:id>', view_func=sites_view, 
     methods=['GET', 'PUT', 'DELETE'])

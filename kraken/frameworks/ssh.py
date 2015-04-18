@@ -78,8 +78,8 @@ class SSHKeysAPI(MethodView):
 
 
 ssh_view = SSHKeysAPI.as_view('ssh_api')
-backend.add_url_rule('/system/ssh_keys', defaults={'id': None}, 
+backend.add_url_rule('/api/system/ssh_keys', defaults={'id': None}, 
     view_func=ssh_view, methods=['GET',])
-backend.add_url_rule('/system/ssh_keys', view_func=ssh_view, methods=['POST',])
-backend.add_url_rule('/system/ssh_keys/<string:id>', view_func=ssh_view, 
+backend.add_url_rule('/api/system/ssh_keys', view_func=ssh_view, methods=['POST',])
+backend.add_url_rule('/api/system/ssh_keys/<string:id>', view_func=ssh_view, 
     methods=['GET', 'DELETE'])

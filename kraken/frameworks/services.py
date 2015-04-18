@@ -71,8 +71,8 @@ class ServicesAPI(MethodView):
 
 
 services_view = ServicesAPI.as_view('services_api')
-backend.add_url_rule('/system/services', defaults={'id': None}, 
+backend.add_url_rule('/api/system/services', defaults={'id': None}, 
     view_func=services_view, methods=['GET',])
-backend.add_url_rule('/system/services', view_func=services_view, methods=['POST',])
-backend.add_url_rule('/system/services/<string:id>', view_func=services_view, 
+backend.add_url_rule('/api/system/services', view_func=services_view, methods=['POST',])
+backend.add_url_rule('/api/system/services/<string:id>', view_func=services_view, 
     methods=['GET', 'PUT', 'DELETE'])

@@ -7,7 +7,7 @@ from arkos.system import sysconfig, systemtime
 backend = Blueprint("config", __name__)
 
 
-@backend.route('/config', methods=["GET", "PUT", "PATCH"])
+@backend.route('/api/config', methods=["GET", "PUT", "PATCH"])
 @auth.required()
 def arkos_config():
     if request.method == "PUT":
@@ -31,19 +31,19 @@ def arkos_config():
     return jsonify(config=config.config, hostname=sysconfig.get_hostname(),
         timezone=sysconfig.get_timezone())
 
-@backend.route('/config/datetime', methods=["GET", "PUT"])
+@backend.route('/api/config/datetime', methods=["GET", "PUT"])
 @auth.required()
 def datetime():
     if request.method == "PUT":
         systemtime.set_datetime()
     return jsonify(datetime={"datetime": systemtime.get_iso_time(), "offset": systemtime.get_offset()})
 
-@backend.route('/system/shutdown', methods=["POST",])
+@backend.route('/api/system/shutdown', methods=["POST",])
 @auth.required()
 def shutdown():
     sysconfig.shutdown()
 
-@backend.route('/system/reboot', methods=["POST",])
+@backend.route('/api/system/reboot', methods=["POST",])
 @auth.required()
 def reboot():
     sysconfig.reboot()

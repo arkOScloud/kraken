@@ -37,7 +37,7 @@ class UpdatesAPI(MethodView):
 
 
 updates_view = UpdatesAPI.as_view('updates_api')
-backend.add_url_rule('/updates', defaults={'id': None}, 
+backend.add_url_rule('/api/updates', defaults={'id': None}, 
     view_func=updates_view, methods=['GET',])
-backend.add_url_rule('/updates', view_func=updates_view, methods=['POST',])
-backend.add_url_rule('/updates/<int:id>', view_func=updates_view, methods=['GET',])
+backend.add_url_rule('/api/updates', view_func=updates_view, methods=['POST',])
+backend.add_url_rule('/api/updates/<int:id>', view_func=updates_view, methods=['GET',])

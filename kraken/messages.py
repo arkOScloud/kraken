@@ -30,7 +30,7 @@ class Message:
         storage.append("genesis:messages", data)
 
 
-@backend.route('/genesis')
+@backend.route('/api/genesis')
 @auth.required()
 def get_messages():
     messages = storage.get_list("genesis:messages")
@@ -46,15 +46,15 @@ def get_messages():
         pushes[x["model"]].append(x["record"])
     return jsonify(messages=messages, pushes=pushes, purges=purges)
 
-@backend.route('/job')
+@backend.route('/api/job')
 @auth.required()
 def get_jobs():
     jobs = []
     for x in storage.scan("job"):
-        jobs.append("/job/%s" % x.split("arkos:job")[1])
+        jobs.append("/api/job/%s" % x.split("arkos:job")[1])
     return jsonify(jobs=jobs)
 
-@backend.route('/job/<string:id>')
+@backend.route('/api/job/<string:id>')
 @auth.required()
 def get_job(id):
     job = storage.get_all("job:%s" % id)

@@ -301,11 +301,11 @@ def guess_file_icon(name):
 
 
 filemgr_view = FileManagerAPI.as_view('filemgr_api')
-backend.add_url_rule('/files/<string:path>', view_func=filemgr_view, 
+backend.add_url_rule('/api/files/<string:path>', view_func=filemgr_view, 
     methods=['GET', 'POST', 'PUT', 'DELETE'])
 shares_view = SharingAPI.as_view('sharing_api')
-backend.add_url_rule('/shares', defaults={"id": None}, view_func=shares_view, 
+backend.add_url_rule('/api/shares', defaults={"id": None}, view_func=shares_view, 
     methods=['GET',])
-backend.add_url_rule('/shares', view_func=shares_view, methods=['POST',])
-backend.add_url_rule('/shares/<string:id>', view_func=shares_view, 
+backend.add_url_rule('/api/shares', view_func=shares_view, methods=['POST',])
+backend.add_url_rule('/api/shares/<string:id>', view_func=shares_view, 
     methods=['GET', 'PUT', 'DELETE'])

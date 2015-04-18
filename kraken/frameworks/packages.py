@@ -88,8 +88,8 @@ def process_info(info):
 
 
 packages_view = PackagesAPI.as_view('sites_api')
-backend.add_url_rule('/system/packages', defaults={'id': None}, 
+backend.add_url_rule('/api/system/packages', defaults={'id': None}, 
     view_func=packages_view, methods=['GET',])
-backend.add_url_rule('/system/packages', view_func=packages_view, methods=['POST',])
-backend.add_url_rule('/system/packages/<string:id>', view_func=packages_view, 
+backend.add_url_rule('/api/system/packages', view_func=packages_view, methods=['POST',])
+backend.add_url_rule('/api/system/packages/<string:id>', view_func=packages_view, 
     methods=['GET',])

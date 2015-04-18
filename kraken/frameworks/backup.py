@@ -65,16 +65,16 @@ class BackupsAPI(MethodView):
         return Response(status=204)
 
 
-@backend.route('/backups/types')
+@backend.route('/api/backups/types')
 @auth.required()
 def get_possible():
     return jsonify(types=backup.get_able())
 
 
 backups_view = BackupsAPI.as_view('backups_api')
-backend.add_url_rule('/backups', defaults={'id': None, 'time': None}, 
+backend.add_url_rule('/api/backups', defaults={'id': None, 'time': None}, 
     view_func=backups_view, methods=['GET',])
-backend.add_url_rule('/backups/<string:id>', defaults={'time': None},
+backend.add_url_rule('/api/backups/<string:id>', defaults={'time': None},
     view_func=backups_view, methods=['GET', 'POST',])
-backend.add_url_rule('/backups/<string:id>/<string:time>', view_func=backups_view, 
+backend.add_url_rule('/api/backups/<string:id>/<string:time>', view_func=backups_view, 
     methods=['GET', 'PUT', 'DELETE'])

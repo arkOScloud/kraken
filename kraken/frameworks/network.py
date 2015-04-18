@@ -63,8 +63,8 @@ class NetworksAPI(MethodView):
         return Response(status=204)
 
 
-@backend.route('/system/netifaces', defaults={'id': None})
-@backend.route('/system/netifaces/<string:id>')
+@backend.route('/api/system/netifaces', defaults={'id': None})
+@backend.route('/api/system/netifaces/<string:id>')
 @auth.required()
 def get_netifaces(id):
     ifaces = network.get_interfaces(id)
@@ -77,8 +77,8 @@ def get_netifaces(id):
 
 
 network_view = NetworksAPI.as_view('networks_api')
-backend.add_url_rule('/system/networks', defaults={'id': None}, 
+backend.add_url_rule('/api/system/networks', defaults={'id': None}, 
     view_func=network_view, methods=['GET',])
-backend.add_url_rule('/system/networks', view_func=network_view, methods=['POST',])
-backend.add_url_rule('/system/networks/<string:id>', view_func=network_view, 
+backend.add_url_rule('/api/system/networks', view_func=network_view, methods=['POST',])
+backend.add_url_rule('/api/system/networks/<string:id>', view_func=network_view, 
     methods=['GET', 'PUT', 'DELETE'])

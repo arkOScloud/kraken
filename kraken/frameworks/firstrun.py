@@ -30,7 +30,7 @@ def install(to_install):
             Message("success", "You will need to refresh this page before changes will take effect.", head="Applications installed successfully")
 
 
-@backend.route('/firstrun', methods=["POST"])
+@backend.route('/api/firstrun', methods=["POST"])
 @auth.required()
 def firstrun():
     data = request.get_json()

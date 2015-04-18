@@ -48,11 +48,11 @@ class DefenceAPI(MethodView):
 
 
 policy_view = PolicyAPI.as_view('policy_api')
-backend.add_url_rule('/system/policies', defaults={'id': None}, 
+backend.add_url_rule('/api/system/policies', defaults={'id': None}, 
     view_func=policy_view, methods=['GET',])
-backend.add_url_rule('/system/policies/<string:id>', view_func=policy_view, methods=['GET', 'PUT'])
+backend.add_url_rule('/api/system/policies/<string:id>', view_func=policy_view, methods=['GET', 'PUT'])
 
 defence_view = DefenceAPI.as_view('defence_api')
-backend.add_url_rule('/system/jails', defaults={'id': None}, 
+backend.add_url_rule('/api/system/jails', defaults={'id': None}, 
     view_func=defence_view, methods=['GET',])
-backend.add_url_rule('/system/jails/<string:id>', view_func=defence_view, methods=['GET', 'PUT'])
+backend.add_url_rule('/api/system/jails/<string:id>', view_func=defence_view, methods=['GET', 'PUT'])

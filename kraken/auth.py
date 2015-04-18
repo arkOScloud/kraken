@@ -89,7 +89,7 @@ def required():
         return decorator
     return wrapper
 
-@backend.route("/token", methods=["POST"])
+@backend.route("/api/token", methods=["POST"])
 def get_token():
     data = request.get_json()
     user, pwd = data.get("username"), data.get("password")
@@ -108,7 +108,7 @@ def get_token():
         resp.status_code = 401
         return resp
 
-@backend.route("/token/refresh", methods=["POST"])
+@backend.route("/api/token/refresh", methods=["POST"])
 def get_refresh_token():
     token = request.get_json().get("token", None)
     if not token:

@@ -157,22 +157,22 @@ class DomainsAPI(MethodView):
 
 
 users_view = UsersAPI.as_view('users_api')
-backend.add_url_rule('/system/users', defaults={'id': None}, 
+backend.add_url_rule('/api/system/users', defaults={'id': None}, 
     view_func=users_view, methods=['GET',])
-backend.add_url_rule('/system/users', view_func=users_view, methods=['POST',])
-backend.add_url_rule('/system/users/<int:id>', view_func=users_view, 
+backend.add_url_rule('/api/system/users', view_func=users_view, methods=['POST',])
+backend.add_url_rule('/api/system/users/<int:id>', view_func=users_view, 
     methods=['GET', 'PUT', 'DELETE'])
 
 groups_view = GroupsAPI.as_view('groups_api')
-backend.add_url_rule('/system/groups', defaults={'id': None}, 
+backend.add_url_rule('/api/system/groups', defaults={'id': None}, 
     view_func=groups_view, methods=['GET',])
-backend.add_url_rule('/system/groups', view_func=groups_view, methods=['POST',])
-backend.add_url_rule('/system/groups/<int:id>', view_func=groups_view, 
+backend.add_url_rule('/api/system/groups', view_func=groups_view, methods=['POST',])
+backend.add_url_rule('/api/system/groups/<int:id>', view_func=groups_view, 
     methods=['GET', 'PUT', 'DELETE'])
 
 domains_view = DomainsAPI.as_view('domains_api')
-backend.add_url_rule('/system/domains', defaults={'id': None}, 
+backend.add_url_rule('/api/system/domains', defaults={'id': None}, 
     view_func=domains_view, methods=['GET',])
-backend.add_url_rule('/system/domains', view_func=domains_view, methods=['POST',])
-backend.add_url_rule('/system/domains/<string:id>', view_func=domains_view, 
+backend.add_url_rule('/api/system/domains', view_func=domains_view, methods=['POST',])
+backend.add_url_rule('/api/system/domains/<string:id>', view_func=domains_view, 
     methods=['GET', 'DELETE'])

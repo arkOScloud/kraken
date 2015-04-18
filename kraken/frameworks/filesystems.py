@@ -88,14 +88,14 @@ class DisksAPI(MethodView):
         return Response(status=204)
 
 
-@backend.route('/points')
+@backend.route('/api/points')
 @auth.required()
 def list_points():
     return jsonify(points=[x.as_dict() for x in filesystems.get_points()])
 
 disks_view = DisksAPI.as_view('disks_api')
-backend.add_url_rule('/system/filesystems', defaults={'id': None}, 
+backend.add_url_rule('/api/system/filesystems', defaults={'id': None}, 
     view_func=disks_view, methods=['GET',])
-backend.add_url_rule('/system/filesystems', view_func=disks_view, methods=['POST',])
-backend.add_url_rule('/system/filesystems/<string:id>', view_func=disks_view, 
+backend.add_url_rule('/api/system/filesystems', view_func=disks_view, methods=['POST',])
+backend.add_url_rule('/api/system/filesystems/<string:id>', view_func=disks_view, 
     methods=['GET', 'PUT', 'DELETE'])

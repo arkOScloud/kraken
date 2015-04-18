@@ -115,7 +115,7 @@ class CertificateAuthoritiesAPI(MethodView):
         return Response(status=204)
 
 
-@backend.route('/certassigns')
+@backend.route('/api/certassigns')
 @auth.required()
 def ssl_able():
     assigns = []
@@ -130,14 +130,14 @@ def ssl_able():
 
 
 certs_view = CertificatesAPI.as_view('certs_api')
-backend.add_url_rule('/certs', defaults={'id': None}, 
+backend.add_url_rule('/api/certs', defaults={'id': None}, 
     view_func=certs_view, methods=['GET',])
-backend.add_url_rule('/certs', view_func=certs_view, methods=['POST',])
-backend.add_url_rule('/certs/<string:id>', view_func=certs_view, 
+backend.add_url_rule('/api/certs', view_func=certs_view, methods=['POST',])
+backend.add_url_rule('/api/certs/<string:id>', view_func=certs_view, 
     methods=['GET', 'PUT', 'DELETE'])
 
 certauth_view = CertificateAuthoritiesAPI.as_view('cert_auths_api')
-backend.add_url_rule('/certauths', defaults={'id': None}, 
+backend.add_url_rule('/api/certauths', defaults={'id': None}, 
     view_func=certauth_view, methods=['GET',])
-backend.add_url_rule('/certauths/<string:id>', view_func=certauth_view, 
+backend.add_url_rule('/api/certauths/<string:id>', view_func=certauth_view, 
     methods=['GET', 'DELETE'])
