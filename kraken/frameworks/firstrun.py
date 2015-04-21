@@ -1,3 +1,5 @@
+import os
+
 from flask import Blueprint, request, Response, current_app
 
 from kraken import auth, genesis
@@ -38,9 +40,8 @@ def firstrun():
     and config.get("enviro", "board") in ["Raspberry Pi", "Raspberry Pi 2", 
     "Cubieboard2", "Cubietruck", "BeagleBone Black", "ODROID-U"]:
         part = 1 if config.get("enviro", "board").startswith("Cubie") else 2
-        if part == 1:
-            shell('fdisk /dev/mmcblk0', 
-                stdin=('d\nn\np\n1\n\n\nw\n' if part == 1 else 'd\n2\nn\np\n2\n\n\nw\n'))
+        shell('fdisk /dev/mmcblk0', 
+            stdin=('d\nn\np\n1\n\n\nw\n' if part == 1 else 'd\n2\nn\np\n2\n\n\nw\n'))
         if not os.path.exists('/etc/cron.d'):
             os.mkdir('/etc/cron.d')
         with open('/etc/cron.d/resize', 'w') as f:
