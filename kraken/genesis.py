@@ -72,7 +72,7 @@ def genesis_build():
                 indent=2, separators=(',', ': ')))
     mydir = os.getcwd()
     os.chdir(path)
-    s = shell("ember build%s" % (" -prod" if DEBUG else ""))
+    s = shell("ember build%s" % (" -prod" if not DEBUG else ""))
     os.chdir(mydir)
     if s["code"] != 0:
         raise Exception("Genesis rebuild process failed")
