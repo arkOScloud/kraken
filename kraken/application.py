@@ -91,7 +91,7 @@ def make_json_error(err):
         report += "Platform: %s %s\n" % (config.get("enviro", "arch"), config.get("enviro", "board"))
         report += "Python version %s\n" % '.'.join([str(x) for x in platform.python_version_tuple()])
         report += "Config path: %s\n\n" % config.filename
-        report += "Loaded applicatons: \n%s\n\n" % "\n".join([x.id for x in applications.get()])
+        report += "Loaded applicatons: \n%s\n\n" % "\n".join([x.id for x in applications.get() if x.installed])
         report += "Request: %s %s\n\n" % (request.method, request.path)
         report += stacktrace
         response = jsonify(message=message, stacktrace=stacktrace, 
