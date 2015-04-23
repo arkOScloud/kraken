@@ -31,7 +31,7 @@ def create_app(app, log_level, config_file, debug=False):
     app.logger.setLevel(log_level)
     
     arkos.logger.active_logger = app.logger
-    app.logger.info('arkOS Kraken %s' % version())
+    app.logger.info('arkOS Kraken %s' % arkos.version)
     
     # Open and load configuration
     app.logger.info("Using config file at %s" % config_file)
@@ -84,7 +84,7 @@ def make_json_error(err):
     if (isinstance(err, HTTPException) and err.code == 500) \
     or not isinstance(err, HTTPException):
         stacktrace = traceback.format_exc()
-        report = "arkOS %s Crash Report\n" % version()
+        report = "arkOS %s Crash Report\n" % arkos.version
         report += "--------------------\n\n"
         report += "Running in %s\n" % config.get("enviro", "run")
         report += "System: %s\n" % shell("uname -a")["stdout"]
@@ -95,7 +95,7 @@ def make_json_error(err):
         report += "Request: %s %s\n\n" % (request.method, request.path)
         report += stacktrace
         response = jsonify(message=message, stacktrace=stacktrace, 
-            report=report, version=version(), arch=config.get("enviro", "arch"))
+            report=report, version=arkos.version, arch=config.get("enviro", "arch"))
     else:
         response = jsonify(message=message)
     response.status_code = err.code if isinstance(err, HTTPException) else 500
