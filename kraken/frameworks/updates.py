@@ -15,7 +15,11 @@ class UpdatesAPI(MethodView):
         ups = []
         data = storage.updates.get("updates")
         if request.args.get("rescan", None) or not data:
-            data = updates.check_updates()
+            try:
+                data = updates.check_updates()
+            except:
+                Message("error", "Could not reach the update server. Please check your Internet settings.", 
+                    head="Update check failed")
         for x in data:
             if id == x["id"]:
                 return jsonify(update={"id": x["id"], "name": x["name"], 

@@ -36,7 +36,8 @@ def arkos_config():
 def datetime():
     if request.method == "PUT":
         systemtime.set_datetime()
-    return jsonify(datetime={"datetime": systemtime.get_iso_time(), "offset": systemtime.get_offset()})
+    return jsonify(datetime={"datetime": systemtime.get_iso_time(), 
+        "offset": systemtime.verify_time(False, False)})
 
 @backend.route('/api/system/shutdown', methods=["POST",])
 @auth.required()

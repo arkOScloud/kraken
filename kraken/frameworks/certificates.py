@@ -122,7 +122,7 @@ def ssl_able():
     for x in websites.get():
         assigns.append({"type": "website", "id": x.id, 
             "name": x.id if x.meta else x.name})
-    for x in applications.get():
+    for x in applications.get(installed=True):
         if x.type == "app" and x.uses_ssl:
             for y in x.get_ssl_able():
                 assigns.append(y)
