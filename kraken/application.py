@@ -20,7 +20,7 @@ from werkzeug.exceptions import default_exceptions, HTTPException
 def create_app(app, log_level, config_file, debug=False):
     app.debug = debug
     app.config["SECRET_KEY"] = random_string()
-    
+
     # Customize logging format
     if not debug:
         stdout = ConsoleHandler(sys.stdout, debug)
@@ -29,35 +29,35 @@ def create_app(app, log_level, config_file, debug=False):
         stdout.setFormatter(dformatter)
         app.logger.addHandler(stdout)
     app.logger.setLevel(log_level)
-    
+
     arkos.logger.active_logger = app.logger
     app.logger.info('arkOS Kraken %s' % arkos.version)
-    
+
     # Open and load configuration
     app.logger.info("Using config file at %s" % config_file)
     app.conf = config
     app.conf.load(config_file)
-    
+
     arch = detect_architecture()
     platform = detect_platform()
     app.logger.info('Detected architecture/hardware: %s, %s' % arch)
     app.logger.info('Detected platform: %s' % platform)
     app.conf.set("enviro", "arch", arch[0])
     app.conf.set("enviro", "board", arch[1])
-    
+
     return app
 
 def run_daemon(environment, log_level, config_file):
     create_app(app, log_level, config_file, environment in ["dev", "vagrant"])
     app.conf.set("enviro", "run", environment)
     app.logger.info('Environment: %s' % environment)
-    
+
     for code in default_exceptions.iterkeys():
         app.error_handler_spec[None][code] = make_json_error
-    
+
     app.register_blueprint(auth.backend)
     app.register_blueprint(messages.backend)
-    
+
     app.logger.info("Loading applications...")
     applications.get()
 
@@ -68,7 +68,7 @@ def run_daemon(environment, log_level, config_file):
     app.logger.info("Initializing Genesis (if present)...")
     genesis.DEBUG = environment in ["dev", "vagrant"]
     app.register_blueprint(genesis.backend)
-    
+
     tracked_services.initialize()
     app.logger.info("Server is up and ready")
     try:
@@ -94,7 +94,7 @@ def make_json_error(err):
         report += "Loaded applicatons: \n%s\n\n" % "\n".join([x.id for x in applications.get() if x.installed])
         report += "Request: %s %s\n\n" % (request.method, request.path)
         report += stacktrace
-        response = jsonify(message=message, stacktrace=stacktrace, 
+        response = jsonify(message=message, stacktrace=stacktrace,
             report=report, version=arkos.version, arch=config.get("enviro", "arch"))
     else:
         response = jsonify(message=message)

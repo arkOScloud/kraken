@@ -17,7 +17,7 @@ class ApplicationsAPI(MethodView):
     def get(self, id):
         if request.args.get("rescan", None):
             applications.scan()
-        apps = applications.get(id, type=request.args.get("type", None), 
+        apps = applications.get(id, type=request.args.get("type", None),
             loadable=request.args.get("loadable", None),
             installed=request.args.get("installed", None))
         if id and not apps:
@@ -26,7 +26,7 @@ class ApplicationsAPI(MethodView):
             return jsonify(apps=[x.as_dict() for x in apps])
         else:
             return jsonify(app=apps.as_dict())
-    
+
     @auth.required()
     def put(self, id):
         operation = json.loads(request.data)["app"]["operation"]
@@ -34,7 +34,7 @@ class ApplicationsAPI(MethodView):
         if not app:
             abort(404)
         if operation == "install":
-            if app.installed: 
+            if app.installed:
                 return jsonify(app=app.as_dict())
             id = as_job(self._install, app)
         elif operation == "uninstall":
@@ -50,7 +50,7 @@ class ApplicationsAPI(MethodView):
         data = app.as_dict()
         data["is_ready"] = False
         return job_response(id, {"app": data})
-    
+
     def _install(self, app):
         message = Message()
         try:
@@ -63,7 +63,7 @@ class ApplicationsAPI(MethodView):
         except Exception, e:
             message.complete("error", "%s could not be installed: %s" % (app.name, str(e)))
             raise
-    
+
     def _uninstall(self, app):
         message = Message()
         try:
@@ -86,15 +86,14 @@ def dispatcher(id, path):
 
 
 apps_view = ApplicationsAPI.as_view('apps_api')
-backend.add_url_rule('/api/apps', defaults={'id': None}, 
+backend.add_url_rule('/api/apps', defaults={'id': None},
     view_func=apps_view, methods=['GET',])
-backend.add_url_rule('/api/apps/<string:id>', view_func=apps_view, 
+backend.add_url_rule('/api/apps/<string:id>', view_func=apps_view,
     methods=['GET', 'PUT'])
-backend.add_url_rule('/api/apps/<string:id>/<path:path>', view_func=dispatcher, 
+backend.add_url_rule('/api/apps/<string:id>/<path:path>', view_func=dispatcher,
     methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE'])
 
 @backend.route('/api/apps/logo/<string:id>')
-@auth.required()
 def get_app_logo(id):
     app = applications.get(id)
     if not app:
