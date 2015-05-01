@@ -23,7 +23,7 @@ class CertificatesAPI(MethodView):
             return jsonify(certs=[x.as_dict() for x in certs])
         else:
             return jsonify(cert=certs.as_dict())
-    
+
     @auth.required()
     def post(self):
         if request.headers.get('Content-Type').startswith("application/json"):
@@ -38,20 +38,20 @@ class CertificatesAPI(MethodView):
             return job_response(id)
         else:
             abort(400)
-    
+
     def _generate(self, data):
         message = Message()
         message.update("info", "Generating certificate...")
         try:
-            cert = certificates.generate_certificate(data["id"], data["domain"], 
-                data["country"], data["state"], data["locale"], data["email"], 
+            cert = certificates.generate_certificate(data["id"], data["domain"],
+                data["country"], data["state"], data["locale"], data["email"],
                 data["keytype"], data["keylength"])
             message.complete("success", "Certificate generated successfully")
             push_record("certs", cert.as_dict())
         except Exception, e:
             message.complete("error", "Certificate could not be generated: %s" % str(e))
             raise
-    
+
     def _upload(self, name, files):
         message = Message()
         message.update("info", "Uploading certificate...")
@@ -62,13 +62,14 @@ class CertificatesAPI(MethodView):
         except Exception, e:
             message.complete("error", "Certificate could not be uploaded: %s" % str(e))
             raise
-    
+
     @auth.required()
     def put(self, id):
         data = json.loads(request.data)["cert"]
         cert = certificates.get(id)
         if not id or not cert:
             abort(404)
+        cert.assigns = list(set(cert.assigns))
         for x in cert.assigns:
             if not x in data["assigns"]:
                 cert.unassign(x)
@@ -76,7 +77,7 @@ class CertificatesAPI(MethodView):
             if not x in cert.assigns:
                 cert.assign(x)
         return jsonify(cert=cert.as_dict(), message="Certificate updated successfully")
-    
+
     @auth.required()
     def delete(self, id):
         cert = certificates.get(id)
@@ -105,7 +106,7 @@ class CertificateAuthoritiesAPI(MethodView):
             return jsonify(certauths=[x.as_dict() for x in certs])
         else:
             return jsonify(certauth=certs.as_dict())
-    
+
     @auth.required()
     def delete(self, id):
         cert = certificates.get_authorities(id)
@@ -120,7 +121,7 @@ class CertificateAuthoritiesAPI(MethodView):
 def ssl_able():
     assigns = []
     for x in websites.get():
-        assigns.append({"type": "website", "id": x.id, 
+        assigns.append({"type": "website", "id": x.id,
             "name": x.id if x.meta else x.name})
     for x in applications.get(installed=True):
         if x.type == "app" and x.uses_ssl:
@@ -130,14 +131,14 @@ def ssl_able():
 
 
 certs_view = CertificatesAPI.as_view('certs_api')
-backend.add_url_rule('/api/certs', defaults={'id': None}, 
+backend.add_url_rule('/api/certs', defaults={'id': None},
     view_func=certs_view, methods=['GET',])
 backend.add_url_rule('/api/certs', view_func=certs_view, methods=['POST',])
-backend.add_url_rule('/api/certs/<string:id>', view_func=certs_view, 
+backend.add_url_rule('/api/certs/<string:id>', view_func=certs_view,
     methods=['GET', 'PUT', 'DELETE'])
 
 certauth_view = CertificateAuthoritiesAPI.as_view('cert_auths_api')
-backend.add_url_rule('/api/certauths', defaults={'id': None}, 
+backend.add_url_rule('/api/certauths', defaults={'id': None},
     view_func=certauth_view, methods=['GET',])
-backend.add_url_rule('/api/certauths/<string:id>', view_func=certauth_view, 
+backend.add_url_rule('/api/certauths/<string:id>', view_func=certauth_view,
     methods=['GET', 'DELETE'])
