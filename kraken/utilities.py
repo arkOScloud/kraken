@@ -21,7 +21,7 @@ class Job(threading.Thread):
         else:
             self._success_code = 201
         threading.Thread.__init__(self)
-    
+
     def run(self):
         storage.set("job:%s" % self._id, {"status": 200})
         storage.expire("job:%s" % self._id, 43200)
@@ -48,9 +48,9 @@ def as_job(func, *args, **kwargs):
 def job_response(id, data=None):
     if data:
         response = jsonify(**data)
-        response.headers.add("Location", "/jobs/%s" % id)
+        response.headers.add("Location", "/api/jobs/%s" % id)
         response.status_code = 202
         return response
     response = Response(status=202)
-    response.headers.add("Location", "/jobs/%s" % id)
+    response.headers.add("Location", "/api/jobs/%s" % id)
     return response

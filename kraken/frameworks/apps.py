@@ -34,7 +34,7 @@ class ApplicationsAPI(MethodView):
         if not app:
             abort(404)
         if operation == "install":
-            if app.installed:
+            if app.installed and not (hasattr(app, "upgradable") and app.upgradable):
                 return jsonify(app=app.as_dict())
             id = as_job(self._install, app)
         elif operation == "uninstall":
@@ -54,7 +54,7 @@ class ApplicationsAPI(MethodView):
     def _install(self, app):
         message = Message()
         try:
-            app.install(message=message)
+            app.install(message=message, force=True)
             smsg = "%s installed successfully." % app.name
             if app.type == "website":
                 smsg += " Go to 'My Applications > %s > Add Website' to set up a site using this app." % app.name

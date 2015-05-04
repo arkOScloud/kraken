@@ -28,11 +28,11 @@ class DatabasesAPI(MethodView):
             return jsonify(databases=[x.as_dict() for x in dbs])
         else:
             return jsonify(database=dbs.as_dict())
-    
+
     @auth.required()
     def post(self):
         data = json.loads(request.data)["database"]
-        manager = databases.get_managers(data["type"])
+        manager = databases.get_managers(data["type_id"])
         try:
             db = manager.add_db(data["id"])
         except Exception, e:
@@ -40,7 +40,7 @@ class DatabasesAPI(MethodView):
             resp.status_code = 422
             return resp
         return jsonify(database=db.as_dict(), message="Database %s added successfully" % str(db.id))
-    
+
     @auth.required()
     def put(self, id):
         data = json.loads(request.data)["database"]
@@ -54,7 +54,7 @@ class DatabasesAPI(MethodView):
         except Exception, e:
             result = str(e)
         return jsonify(database={"id": db.id, "result": result})
-    
+
     @auth.required()
     def delete(self, id):
         db = databases.get(id)
@@ -81,7 +81,7 @@ class DatabaseUsersAPI(MethodView):
             return jsonify(database_users=[x.as_dict() for x in u])
         else:
             return jsonify(database_user=u.as_dict())
-    
+
     @auth.required()
     def post(self):
         data = json.loads(request.data)["database_user"]
@@ -93,7 +93,7 @@ class DatabaseUsersAPI(MethodView):
             resp.status_code = 422
             return resp
         return jsonify(database_user=u.as_dict(), message="Database user %s added successfully" % str(u.id))
-    
+
     @auth.required()
     def put(self, id):
         data = json.loads(request.data)["database_user"]
@@ -105,7 +105,7 @@ class DatabaseUsersAPI(MethodView):
         u.chperm(data["operation"], databases.get(data["database"]))
         push_record("database_users", u.as_dict())
         return Response(status=201)
-    
+
     @auth.required()
     def delete(self, id):
         u = databases.get_user(id)
@@ -130,15 +130,15 @@ def list_types():
 
 
 dbs_view = DatabasesAPI.as_view('dbs_api')
-backend.add_url_rule('/api/databases', defaults={'id': None}, 
+backend.add_url_rule('/api/databases', defaults={'id': None},
     view_func=dbs_view, methods=['GET',])
 backend.add_url_rule('/api/databases', view_func=dbs_view, methods=['POST',])
-backend.add_url_rule('/api/databases/<string:id>', view_func=dbs_view, 
+backend.add_url_rule('/api/databases/<string:id>', view_func=dbs_view,
     methods=['GET', 'PUT', 'DELETE'])
 
 dbusers_view = DatabaseUsersAPI.as_view('db_users_api')
-backend.add_url_rule('/api/database_users', defaults={'id': None}, 
+backend.add_url_rule('/api/database_users', defaults={'id': None},
     view_func=dbusers_view, methods=['GET',])
 backend.add_url_rule('/api/database_users', view_func=dbusers_view, methods=['POST',])
-backend.add_url_rule('/api/database_users/<string:id>', view_func=dbusers_view, 
+backend.add_url_rule('/api/database_users/<string:id>', view_func=dbusers_view,
     methods=['GET', 'PUT', 'DELETE'])

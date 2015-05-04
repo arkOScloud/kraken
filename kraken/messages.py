@@ -18,14 +18,14 @@ class Message:
             data = {"id": self.id, "class": "info", "headline": None,
                 "message": "Please wait...", "complete": False}
         storage.append("genesis:messages", data)
-    
+
     def update(self, cls, msg, head=None):
         data = {"id": self.id, "class": cls, "message": msg, "headline": head,
             "complete": False}
         storage.append("genesis:messages", data)
-    
+
     def complete(self, cls, msg, head=None):
-        data = {"id": self.id, "class": cls, "message": msg, "headline": head, 
+        data = {"id": self.id, "class": cls, "message": msg, "headline": head,
             "complete": True}
         storage.append("genesis:messages", data)
 
@@ -46,15 +46,15 @@ def get_messages():
         pushes[x["model"]].append(x["record"])
     return jsonify(messages=messages, pushes=pushes, purges=purges)
 
-@backend.route('/api/job')
+@backend.route('/api/jobs')
 @auth.required()
 def get_jobs():
     jobs = []
     for x in storage.scan("job"):
-        jobs.append("/api/job/%s" % x.split("arkos:job")[1])
+        jobs.append("/api/jobs/%s" % x.split("arkos:job")[1])
     return jsonify(jobs=jobs)
 
-@backend.route('/api/job/<string:id>')
+@backend.route('/api/jobs/<string:id>')
 @auth.required()
 def get_job(id):
     job = storage.get_all("job:%s" % id)
