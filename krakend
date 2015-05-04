@@ -69,17 +69,15 @@ if __name__ == '__main__':
 
     # Find default config file
     if not config_file:
-        # Check for config file in /etc/genesis/genesis.conf
-        if os.path.isfile('/etc/arkos/settings.json'):
-            config_file = '/etc/arkos/settings.json'
-        elif os.path.isfile(os.path.join(sys.path[0], 'settings.json')):
-            # Try local config file
-            config_file = os.path.join(sys.path[0], 'settings.json')
+        if environment == "prod":
+            config_file = "/etc/arkos/settings.json"
         else:
-            raise Exception("No configuration file found")
-    
+            config_file = os.path.join(os.path.dirname(__file__), 'settings.json')
+    secrets_file = os.path.join(os.path.dirname(config_file), "secrets.json")
+    policy_file = os.path.join(os.path.dirname(config_file), "secrets.json")
+
     if action == 'run':
-        run_daemon(environment, log_level, config_file)
+        run_daemon(environment, log_level, config_file, secrets_file)
     else:
         krakend = KrakenDaemon('/var/run/kraken.pid', stdout='/var/log/kraken.log')
         krakend.environment = environment

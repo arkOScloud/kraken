@@ -1,42 +1,40 @@
 import logging
-import platform
 import sys
-import traceback
 
 import auth
 import genesis
 import messages
 
 import arkos
-from arkos import config, applications, tracked_services
-from arkos.utilities.logs import ConsoleHandler
 from arkos.utilities import *
+from arkos.utilities.logs import ConsoleHandler
+from kraken.utilities import add_cors_to_response, make_json_error
 from kraken.framework import register_frameworks
 
 from flask import Flask, jsonify, request
-from werkzeug.exceptions import default_exceptions, HTTPException
+from werkzeug.exceptions import default_exceptions
 
 
-def create_app(app, log_level, config_file, debug=False):
-    app.debug = debug
+app = Flask(__name__)
+
+def run_daemon(environment, log_level, config_file, secrets_file):
+    app.debug = environment in ["dev", "vagrant"]
     app.config["SECRET_KEY"] = random_string()
 
     # Customize logging format
-    if not debug:
-        stdout = ConsoleHandler(sys.stdout, debug)
+    if not app.debug:
+        stdout = ConsoleHandler(sys.stdout, app.debug)
         stdout.setLevel(log_level)
         dformatter = logging.Formatter('%(asctime)s [%(levelname)s] %(module)s: %(message)s')
         stdout.setFormatter(dformatter)
         app.logger.addHandler(stdout)
     app.logger.setLevel(log_level)
 
-    arkos.logger.active_logger = app.logger
+    # Open and load configuraton
+    config = arkos.init(config_file, secrets_file, app.logger)
     app.logger.info('arkOS Kraken %s' % arkos.version)
-
-    # Open and load configuration
-    app.logger.info("Using config file at %s" % config_file)
+    app.logger.info("Using config file at %s" % config.filename)
     app.conf = config
-    app.conf.load(config_file)
 
     arch = detect_architecture()
     platform = detect_platform()
@@ -44,11 +42,6 @@ def create_app(app, log_level, config_file, debug=False):
     app.logger.info('Detected platform: %s' % platform)
     app.conf.set("enviro", "arch", arch[0])
     app.conf.set("enviro", "board", arch[1])
-
-    return app
-
-def run_daemon(environment, log_level, config_file):
-    create_app(app, log_level, config_file, environment in ["dev", "vagrant"])
     app.conf.set("enviro", "run", environment)
     app.logger.info('Environment: %s' % environment)
 
@@ -58,61 +51,21 @@ def run_daemon(environment, log_level, config_file):
     app.register_blueprint(auth.backend)
     app.register_blueprint(messages.backend)
 
-    app.logger.info("Loading applications...")
-    applications.get()
+    app.logger.info("Loading applications and scanning system...")
+    arkos.initial_scans()
 
     # Load framework blueprints
     app.logger.info("Loading frameworks...")
     register_frameworks(app)
 
     app.logger.info("Initializing Genesis (if present)...")
-    genesis.DEBUG = environment in ["dev", "vagrant"]
+    genesis.DEBUG = app.debug
     app.register_blueprint(genesis.backend)
 
-    tracked_services.initialize()
+    app.after_request(add_cors_to_response)
     app.logger.info("Server is up and ready")
     try:
         app.run(host="0.0.0.0", port=8000)
     except KeyboardInterrupt:
         app.logger.info("Received interrupt")
-
-def make_json_error(err):
-    if hasattr(err, "description"):
-        message = err.description
-    else:
-        message = str(err)
-    if (isinstance(err, HTTPException) and err.code == 500) \
-    or not isinstance(err, HTTPException):
-        stacktrace = traceback.format_exc()
-        report = "arkOS %s Crash Report\n" % arkos.version
-        report += "--------------------\n\n"
-        report += "Running in %s\n" % config.get("enviro", "run")
-        report += "System: %s\n" % shell("uname -a")["stdout"]
-        report += "Platform: %s %s\n" % (config.get("enviro", "arch"), config.get("enviro", "board"))
-        report += "Python version %s\n" % '.'.join([str(x) for x in platform.python_version_tuple()])
-        report += "Config path: %s\n\n" % config.filename
-        report += "Loaded applicatons: \n%s\n\n" % "\n".join([x.id for x in applications.get() if x.installed])
-        report += "Request: %s %s\n\n" % (request.method, request.path)
-        report += stacktrace
-        response = jsonify(message=message, stacktrace=stacktrace,
-            report=report, version=arkos.version, arch=config.get("enviro", "arch"))
-    else:
-        response = jsonify(message=message)
-    response.status_code = err.code if isinstance(err, HTTPException) else 500
-    return add_cors(response)
-
-
-app = Flask(__name__)
-
-@app.after_request
-def add_cors(resp):
-    """ Ensure all responses have the CORS headers. This ensures any failures are also accessible
-        by the client. """
-    resp.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin','*')
-    resp.headers['Access-Control-Allow-Credentials'] = 'true'
-    resp.headers['Access-Control-Allow-Methods'] = 'PATCH, PUT, POST, OPTIONS, GET, DELETE'
-    resp.headers['Access-Control-Allow-Headers'] = 'Authorization, Origin, X-Requested-With, Accept, DNT, Cache-Control, Accept-Encoding, Content-Type'
-    # set low for debugging
-    if app.debug:
-        resp.headers['Access-Control-Max-Age'] = '1'
-    return resp
+        raise
