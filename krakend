@@ -74,10 +74,10 @@ if __name__ == '__main__':
         else:
             config_file = os.path.join(os.path.dirname(__file__), 'settings.json')
     secrets_file = os.path.join(os.path.dirname(config_file), "secrets.json")
-    policy_file = os.path.join(os.path.dirname(config_file), "secrets.json")
+    policy_file = os.path.join(os.path.dirname(config_file), "policies.json")
 
     if action == 'run':
-        run_daemon(environment, log_level, config_file, secrets_file)
+        run_daemon(environment, log_level, config_file, secrets_file, policy_file)
     else:
         krakend = KrakenDaemon('/var/run/kraken.pid', stdout='/var/log/kraken.log')
         krakend.environment = environment

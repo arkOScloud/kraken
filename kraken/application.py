@@ -17,7 +17,7 @@ from werkzeug.exceptions import default_exceptions
 
 app = Flask(__name__)
 
-def run_daemon(environment, log_level, config_file, secrets_file):
+def run_daemon(environment, log_level, config_file, secrets_file, policies_file):
     app.debug = environment in ["dev", "vagrant"]
     app.config["SECRET_KEY"] = random_string()
 
@@ -31,7 +31,7 @@ def run_daemon(environment, log_level, config_file, secrets_file):
     app.logger.setLevel(log_level)
 
     # Open and load configuraton
-    config = arkos.init(config_file, secrets_file, app.logger)
+    config = arkos.init(config_file, secrets_file, policies_file, app.logger)
     app.logger.info('arkOS Kraken %s' % arkos.version)
     app.logger.info("Using config file at %s" % config.filename)
     app.conf = config
