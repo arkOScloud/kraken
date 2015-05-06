@@ -11,6 +11,7 @@ from arkos.system import users, groups
 from arkos.utilities import b64_to_path, path_to_b64, compress, extract, str_fperms, random_string
 
 from kraken import auth
+from werkzeug import secure_filename
 from flask import Response, Blueprint, jsonify, request, abort
 from flask.views import MethodView
 from kraken.messages import remove_record
@@ -32,7 +33,7 @@ class FileManagerAPI(MethodView):
             return jsonify(files=data)
         else:
             return jsonify(file=as_dict(path, content=request.args.get("content", False)))
-    
+
     @auth.required()
     def post(self, path):
         path = b64_to_path(path)
@@ -43,17 +44,13 @@ class FileManagerAPI(MethodView):
             resp.status_code = 422
             return resp
         if request.headers.get('Content-Type').startswith("multipart/form-data"):
-            f = request.files.get("file")
-            if type(f) == list:
-                for x in f:
-                    filename = secure_filename(x.filename)
-                    x.save(os.path.join(path, filename))
-            else:
-                filename = secure_filename(f.filename)
-                f.save(os.path.join(path, filename))
             results = []
-            for x in os.listdir(path):
-                results.append(as_dict(os.path.join(path, x)))
+            f = request.files
+            for x in f:
+                filename = secure_filename(f[x].filename)
+                f[x].save(os.path.join(path, filename))
+                results.append(as_dict(os.path.join(path, filename)))
+            return jsonify(files=results)
         else:
             data = json.loads(request.data)["file"]
             if not os.path.exists(path):
@@ -68,7 +65,7 @@ class FileManagerAPI(MethodView):
                 with open(os.path.join(path, data["name"]), 'w') as f:
                     f.write("")
             return jsonify(file=as_dict(os.path.join(path, data["name"])))
-    
+
     @auth.required()
     def put(self, path):
         data = json.loads(request.data)["file"]
@@ -125,7 +122,7 @@ class FileManagerAPI(MethodView):
             return jsonify(file=as_dict(data["path"]))
         else:
             abort(422)
-    
+
     @auth.required()
     def delete(self, path):
         path = b64_to_path(path)
@@ -153,7 +150,7 @@ class SharingAPI(MethodView):
             return jsonify(shares=[x.as_dict() for x in shares])
         else:
             return jsonify(share=shares.as_dict())
-    
+
     @auth.required()
     def post(self):
         data = request.get_json()["share"]
@@ -161,7 +158,7 @@ class SharingAPI(MethodView):
         share = shared_files.Share(id, data["path"], data.get("expires", 0))
         share.add()
         return jsonify(share=share.as_dict())
-    
+
     @auth.required()
     def put(self, id):
         share = shared_files.get(id)
@@ -173,7 +170,7 @@ class SharingAPI(MethodView):
         else:
             share.update_expiry(False)
         return jsonify(share=share.as_dict())
-    
+
     @auth.required()
     def delete(self, id):
         item = shared_files.get(id)
@@ -206,22 +203,22 @@ def download(id):
         resp.headers["Content-Length"] = os.path.getsize(apath)
         resp.headers["Content-Disposition"] = "attachment; filename=%s" % os.path.basename(apath)
         return resp
-    else: 
+    else:
         with open(path, "r") as f:
             data = f.read()
         resp = Response(data, mimetype="application/octet-stream")
-        resp.headers["Content-Length"] = str(len(data.encode('utf-8')))
+        resp.headers["Content-Length"] = str(len(data))
         resp.headers["Content-Disposition"] = "attachment; filename=%s" % os.path.basename(path)
         return resp
 
 
 def as_dict(path, content=False):
     name = os.path.basename(path)
-    data = {"id": path_to_b64(path), "name": name, "path": path, "folder": False, 
+    data = {"id": path_to_b64(path), "name": name, "path": path, "folder": False,
         "hidden": name.startswith(".")}
     fstat = os.lstat(path)
     mode = fstat[stat.ST_MODE]
-    
+
     if os.path.ismount(path):
         data["type"] = "mount"
         data["folder"] = True
@@ -234,7 +231,7 @@ def as_dict(path, content=False):
     elif stat.S_ISDIR(mode):
         data["type"] = "folder"
         data["folder"] = True
-        data["icon"] = "fa-folder"
+        data["icon"] = "fa-folder-o"
     elif stat.S_ISSOCK(mode):
         data["type"] = "socket"
         data["icon"] = "fa-plug"
@@ -301,11 +298,11 @@ def guess_file_icon(name):
 
 
 filemgr_view = FileManagerAPI.as_view('filemgr_api')
-backend.add_url_rule('/api/files/<string:path>', view_func=filemgr_view, 
+backend.add_url_rule('/api/files/<string:path>', view_func=filemgr_view,
     methods=['GET', 'POST', 'PUT', 'DELETE'])
 shares_view = SharingAPI.as_view('sharing_api')
-backend.add_url_rule('/api/shares', defaults={"id": None}, view_func=shares_view, 
+backend.add_url_rule('/api/shares', defaults={"id": None}, view_func=shares_view,
     methods=['GET',])
 backend.add_url_rule('/api/shares', view_func=shares_view, methods=['POST',])
-backend.add_url_rule('/api/shares/<string:id>', view_func=shares_view, 
+backend.add_url_rule('/api/shares/<string:id>', view_func=shares_view,
     methods=['GET', 'PUT', 'DELETE'])
