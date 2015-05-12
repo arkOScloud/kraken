@@ -13,7 +13,8 @@ from kraken.application import run_daemon
 
 class KrakenDaemon(Daemon):
     def run(self):
-        run_daemon(self.environment, self.log_level, self.config_file)
+        run_daemon(self.environment, self.log_level, self.config_file,
+            self.secrets_file, self.policy_file)
 
 
 def usage():
@@ -83,6 +84,8 @@ if __name__ == '__main__':
         krakend.environment = environment
         krakend.log_level = log_level
         krakend.config_file = config_file
+        krakend.secrets_file = secrets_file
+        krakend.policy_file = policy_file
 
         if 'start' == action:
             krakend.start()
