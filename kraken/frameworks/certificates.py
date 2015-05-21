@@ -69,7 +69,6 @@ class CertificatesAPI(MethodView):
         cert = certificates.get(id)
         if not id or not cert:
             abort(404)
-        cert.assigns = list(set(cert.assigns))
         for x in cert.assigns:
             if not x in data["assigns"]:
                 cert.unassign(x)
