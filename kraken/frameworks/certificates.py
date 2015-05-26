@@ -45,7 +45,7 @@ class CertificatesAPI(MethodView):
         try:
             cert = certificates.generate_certificate(data["id"], data["domain"],
                 data["country"], data["state"], data["locale"], data["email"],
-                data["keytype"], data["keylength"])
+                data["keytype"], data["keylength"], message)
             message.complete("success", "Certificate generated successfully")
             push_record("certs", cert.as_dict())
         except Exception, e:
@@ -56,7 +56,7 @@ class CertificatesAPI(MethodView):
         message = Message()
         message.update("info", "Uploading certificate...")
         try:
-            cert = certificates.upload_certificate(name, files[0], files[1], files[2])
+            cert = certificates.upload_certificate(name, files[0], files[1], files[2], message)
             message.complete("success", "Certificate uploaded successfully")
             push_record("certs", cert.as_dict())
         except Exception, e:
