@@ -14,7 +14,7 @@ class AnonymousUser:
         self.first_name = "Anonymous"
         self.last_name = ""
         self.admin = True
-    
+
     def verify_passwd(self, passwd):
         return True
 
@@ -34,32 +34,46 @@ def create_token(user):
         "ufn": user.first_name,
         "uln": user.last_name,
     }
-    if iat: 
+    if iat:
         payload["iat"] = iat
         payload["exp"] = iat + config.get("genesis", "token_valid_for", 3600)
     tjwss = TimedJSONWebSignatureSerializer(secret_key=current_app.config["SECRET_KEY"],
-        expires_in=config.get("genesis", "token_valid_for", 3600), 
+        expires_in=config.get("genesis", "token_valid_for", 3600),
         algorithm_name="HS256")
     return tjwss.dumps(payload).decode("utf-8")
 
 def verify(token=None):
     if config.get("genesis", "anonymous"):
         return
-    
+
+    if request.headers.get("X-API-Key", None):
+        api_key = request.headers.get("X-API-Key")
+        data = config.get_all("api-keys")
+        for u in data:
+            for key in data[u]:
+                if key == api_key:
+                    user = users.get(name=u)
+                    if not user or not user.admin:
+                        resp = jsonify(message="Authorization required")
+                        resp.status_code = 401
+                        return resp
+                    else:
+                        return
+
     if not token:
         token = request.headers.get("Authorization", None)
         if not token:
             resp = jsonify(message="Authorization required")
             resp.status_code = 401
             return resp
-        
+
         token = token.split()
         if token[0] != "Bearer" or len(token) > 2:
             resp = jsonify(message="Malformed token")
             resp.status_code = 400
             return resp
         token = token[1]
-    
+
     try:
         tjwss = TimedJSONWebSignatureSerializer(secret_key=current_app.config["SECRET_KEY"],
             expires_in=3600, algorithm_name="HS256")
