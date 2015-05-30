@@ -103,8 +103,7 @@ class DatabaseUsersAPI(MethodView):
         elif not data.get("operation"):
             abort(400)
         u.chperm(data["operation"], databases.get(data["database"]))
-        push_record("database_users", u.as_dict())
-        return Response(status=201)
+        return jsonify(database_user=u.as_dict())
 
     @auth.required()
     def delete(self, id):
