@@ -15,21 +15,22 @@ backend = Blueprint("firstrun", __name__)
 
 def install(to_install):
     errors = False
+    msg = Message()
     for x in to_install:
         a = applications.get(x)
         try:
-            a.install()
+            a.install(message=msg)
         except:
             errors = True
     if to_install:
         try:
             genesis.genesis_build()
         except:
-            Message("error", "Genesis rebuild failed. Please try to manually rebuild.")
+            msg.complete("error", "Genesis rebuild failed. Please try to manually rebuild.")
         if errors:
-            Message("warning", "One or more applications failed to install. Check the App Store pane for more information.")
+            msg.complete("warning", "One or more applications failed to install. Check the App Store pane for more information.")
         else:
-            Message("success", "You will need to refresh this page before changes will take effect.", head="Applications installed successfully")
+            msg.complete("success", "You may need to restart your device before changes will take effect.", head="Applications installed successfully")
 
 
 @backend.route('/api/firstrun', methods=["POST"])
@@ -37,10 +38,10 @@ def install(to_install):
 def firstrun():
     data = request.get_json()
     if data.get("resize_sd_card", None) \
-    and config.get("enviro", "board") in ["Raspberry Pi", "Raspberry Pi 2", 
+    and config.get("enviro", "board") in ["Raspberry Pi", "Raspberry Pi 2",
     "Cubieboard2", "Cubietruck", "BeagleBone Black", "ODROID-U"]:
         part = 1 if config.get("enviro", "board").startswith("Cubie") else 2
-        shell('fdisk /dev/mmcblk0', 
+        shell('fdisk /dev/mmcblk0',
             stdin=('d\nn\np\n1\n\n\nw\n' if part == 1 else 'd\n2\nn\np\n2\n\n\nw\n'))
         if not os.path.exists('/etc/cron.d'):
             os.mkdir('/etc/cron.d')

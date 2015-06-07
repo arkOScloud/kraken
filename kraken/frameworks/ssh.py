@@ -24,14 +24,17 @@ class SSHKeysAPI(MethodView):
                 y = y.rstrip("\n")
                 if not y.split():
                     continue
-                key = {"id": user+"-"+y.split()[1][:10], "user": user, "key": y}
+                try:
+                    key = {"id": user+"-"+y.split()[1][:10], "user": user, "key": y}
+                except IndexError:
+                    continue
                 if id and key["id"] == id:
                     return jsonify(ssh_key=key)
                 keys.append(key)
         if id:
             abort(404)
         return jsonify(ssh_keys=keys)
-    
+
     @auth.required()
     def post(self):
         data = request.get_json()["ssh_key"]
@@ -60,7 +63,7 @@ class SSHKeysAPI(MethodView):
                 f.seek(0)
                 key["id"] = key["user"]+"-"+data["key"].split()[1][:10]
         return jsonify(ssh_key=key, message="SSH key for %s added successfully" % data["user"])
-    
+
     @auth.required()
     def delete(self, id):
         user, ldat = id.rsplit("-", 1)
@@ -78,8 +81,8 @@ class SSHKeysAPI(MethodView):
 
 
 ssh_view = SSHKeysAPI.as_view('ssh_api')
-backend.add_url_rule('/api/system/ssh_keys', defaults={'id': None}, 
+backend.add_url_rule('/api/system/ssh_keys', defaults={'id': None},
     view_func=ssh_view, methods=['GET',])
 backend.add_url_rule('/api/system/ssh_keys', view_func=ssh_view, methods=['POST',])
-backend.add_url_rule('/api/system/ssh_keys/<string:id>', view_func=ssh_view, 
+backend.add_url_rule('/api/system/ssh_keys/<string:id>', view_func=ssh_view,
     methods=['GET', 'DELETE'])
