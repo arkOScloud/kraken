@@ -106,7 +106,7 @@ def required():
 @backend.route("/api/token", methods=["POST"])
 def get_token():
     data = request.get_json()
-    user, pwd = data.get("username"), data.get("password")
+    user, pwd = data.get("username", ""), data.get("password", "")
     if config.get("genesis", "anonymous"):
         user = AnonymousUser()
     else:

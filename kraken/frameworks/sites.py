@@ -1,9 +1,10 @@
 import json
+import traceback
 
 from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
-from kraken import auth
+from kraken import app, auth
 from arkos import applications, websites, certificates
 from kraken.messages import Message, push_record, remove_record
 from kraken.utilities import as_job, job_response
@@ -23,13 +24,13 @@ class WebsitesAPI(MethodView):
             return jsonify(websites=[x.as_dict() for x in sites])
         else:
             return jsonify(website=sites.as_dict())
-    
+
     @auth.required()
     def post(self):
         data = json.loads(request.data)["website"]
         id = as_job(self._post, data)
         return job_response(id)
-    
+
     def _post(self, data):
         message = Message()
         app = applications.get(data["site_type"])
@@ -44,8 +45,9 @@ class WebsitesAPI(MethodView):
         except Exception, e:
             message.complete("error", "%s could not be installed: %s" % (data["id"], str(e)), head="Installing website")
             remove_record("website", data["id"])
-            raise
-    
+            app.logger.error("%s could not be installed")
+            app.logger.error("Stacktrace is as follows:\n%s" % traceback.format_exc())
+
     @auth.required()
     def put(self, id):
         data = json.loads(request.data)["website"]
@@ -70,12 +72,12 @@ class WebsitesAPI(MethodView):
         push_record("website", site.as_dict())
         remove_record("website", id)
         return jsonify(message="Site edited successfully")
-    
+
     @auth.required()
     def delete(self, id):
         id = as_job(self._delete, id, success_code=204)
         return job_response(id)
-    
+
     def _delete(self, id):
         message = Message()
         site = websites.get(id)
@@ -85,7 +87,8 @@ class WebsitesAPI(MethodView):
             remove_record("website", id)
         except Exception, e:
             message.complete("error", "%s could not be removed: %s" % (id, str(e)), head="Removing website")
-            raise
+            app.logger.error("%s could not be removed")
+            app.logger.error("Stacktrace is as follows:\n%s" % traceback.format_exc())
 
 
 @backend.route('/api/websites/actions/<string:id>/<string:action>', methods=["POST",])
@@ -108,8 +111,8 @@ def perform_action(id, action):
 
 
 sites_view = WebsitesAPI.as_view('sites_api')
-backend.add_url_rule('/api/websites', defaults={'id': None}, 
+backend.add_url_rule('/api/websites', defaults={'id': None},
     view_func=sites_view, methods=['GET',])
 backend.add_url_rule('/api/websites', view_func=sites_view, methods=['POST',])
-backend.add_url_rule('/api/websites/<string:id>', view_func=sites_view, 
+backend.add_url_rule('/api/websites/<string:id>', view_func=sites_view,
     methods=['GET', 'PUT', 'DELETE'])
