@@ -4,7 +4,8 @@ import traceback
 from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
-from kraken import app, auth
+from kraken import auth
+from kraken.application import app
 from arkos import applications, websites, certificates
 from kraken.messages import Message, push_record, remove_record
 from kraken.utilities import as_job, job_response
@@ -33,11 +34,11 @@ class WebsitesAPI(MethodView):
 
     def _post(self, data):
         message = Message()
-        app = applications.get(data["site_type"])
-        site = app._website
+        sapp = applications.get(data["site_type"])
+        site = sapp._website
         site = site(data["id"], data["addr"], data["port"])
         try:
-            specialmsg = site.install(app, data["extra_data"], True, message)
+            specialmsg = site.install(sapp, data["extra_data"], True, message)
             message.complete("success", "%s site installed successfully" % site.meta.name, head="Installing website")
             if specialmsg:
                 Message("info", specialmsg)
@@ -45,8 +46,8 @@ class WebsitesAPI(MethodView):
         except Exception, e:
             message.complete("error", "%s could not be installed: %s" % (data["id"], str(e)), head="Installing website")
             remove_record("website", data["id"])
-            app.logger.error("%s could not be installed")
-            app.logger.error("Stacktrace is as follows:\n%s" % traceback.format_exc())
+            app.logger.error("%s could not be installed" % data["id"])
+            app.logger.error("Stacktrace is as follows:\n %s" % traceback.format_exc())
 
     @auth.required()
     def put(self, id):
