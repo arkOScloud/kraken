@@ -1,5 +1,6 @@
 import logging
 import sys
+import ssl
 
 import auth
 import genesis
@@ -65,7 +66,14 @@ def run_daemon(environment, log_level, config_file, secrets_file, policies_file)
     app.after_request(add_cors_to_response)
     app.logger.info("Server is up and ready")
     try:
-        app.run(host="0.0.0.0", port=8000)
+        if app.conf.get("genesis", "ssl", False):
+            sslctx = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
+            sslctx.load_cert_chain(app.conf.get("genesis", "cert_file"),
+                app.conf.get("genesis", "cert_key"))
+            app.run(host=app.conf.get("genesis", "host"), port=app.conf.get("genesis", "port"),
+                ssl_context=sslctx)
+        else:
+            app.run(host=app.conf.get("genesis", "host"), port=app.conf.get("genesis", "port"))
     except KeyboardInterrupt:
         app.logger.info("Received interrupt")
         raise

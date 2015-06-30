@@ -67,8 +67,14 @@ class CertificatesAPI(MethodView):
     def put(self, id):
         data = json.loads(request.data)["cert"]
         cert = certificates.get(id)
+        other_certs = [x for x in certificates.get() if x.id != id]
         if not id or not cert:
             abort(404)
+        for x in other_certs:
+            for y in data["assigns"]:
+                if y in x.assigns:
+                    x.unassign(y)
+                    push_record("certs", x.as_dict())
         for x in cert.assigns:
             if not x in data["assigns"]:
                 cert.unassign(x)
@@ -119,6 +125,7 @@ class CertificateAuthoritiesAPI(MethodView):
 @auth.required()
 def ssl_able():
     assigns = []
+    assigns.append({"type": "genesis", "id": "genesis", "name": "arkOS Genesis/API"})
     for x in websites.get():
         assigns.append({"type": "website", "id": x.id,
             "name": x.id if x.meta else x.name})
