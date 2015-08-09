@@ -1,13 +1,13 @@
 import os
 
-from flask import Blueprint, request, Response, current_app
+from flask import Blueprint, request, Response, current_app, jsonify
 
 from kraken import auth, genesis
 from kraken.utilities import as_job
 from kraken.messages import Message, push_record
 
-from arkos import config, applications
-from arkos.utilities import shell
+from arkos import config, applications, security
+from arkos.utilities import shell, random_string
 from arkos.system import filesystems
 
 backend = Blueprint("firstrun", __name__)
@@ -79,4 +79,7 @@ def firstrun():
                 f.write('options sunxi_gmac mac_str="%s"\n' % data.get("cubie_mac"))
     if data.get("install"):
         as_job(install, data["install"])
-    return Response(status=200)
+    security.initialize_fw()
+    rootpwd = random_string()[:16]
+    shell("passwd root", stdin="%s\n%s\n" % (rootpwd,rootpwd))
+    return jsonify(rootpwd=rootpwd)
