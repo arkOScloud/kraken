@@ -6,7 +6,7 @@ from flask.views import MethodView
 
 from kraken import auth
 from kraken.application import app
-from arkos import applications, websites, certificates
+from arkos import applications, websites, certificates, tracked_services
 from kraken.messages import Message, push_record, remove_record
 from kraken.utilities import as_job, job_response
 
@@ -86,6 +86,7 @@ class WebsitesAPI(MethodView):
             site.remove(message)
             message.complete("success", "%s site removed successfully" % site.meta.name, head="Removing website")
             remove_record("website", id)
+            remove_record("policy", id)
         except Exception, e:
             message.complete("error", "%s could not be removed: %s" % (id, str(e)), head="Removing website")
             app.logger.error("%s could not be removed")
