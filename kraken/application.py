@@ -61,7 +61,11 @@ def run_daemon(environment, log_level, config_file, secrets_file, policies_file)
 
     app.logger.info("Initializing Genesis (if present)...")
     genesis.DEBUG = app.debug
-    app.register_blueprint(genesis.backend)
+    try:
+        app.register_blueprint(genesis.backend)
+    except:
+        messages.Message("warn", "Genesis failed to rebuild. If you can access Genesis, you may not be able to see recently installed apps. See the logs for more information.", head="Warning")
+        app.logger.error("Genesis failed to build. Kraken will finish loading but you may not be able to access the Web interface.")
 
     app.after_request(add_cors_to_response)
     app.logger.info("Server is up and ready")
