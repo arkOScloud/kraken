@@ -1,5 +1,4 @@
 import glob
-import json
 import os
 
 from flask import Response, Blueprint, abort, jsonify, request

@@ -1,4 +1,3 @@
-import json
 import traceback
 
 from flask import Response, Blueprint, abort, jsonify, request
@@ -28,7 +27,7 @@ class WebsitesAPI(MethodView):
 
     @auth.required()
     def post(self):
-        data = json.loads(request.data)["website"]
+        data = request.get_json()["website"]
         id = as_job(self._post, data)
         return job_response(id)
 
@@ -51,7 +50,7 @@ class WebsitesAPI(MethodView):
 
     @auth.required()
     def put(self, id):
-        data = json.loads(request.data)["website"]
+        data = request.get_json()["website"]
         site = websites.get(id)
         if not site:
             abort(404)

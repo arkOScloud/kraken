@@ -1,4 +1,3 @@
-import json
 import os
 
 from flask import Response, Blueprint, abort, jsonify, request, send_from_directory
@@ -29,7 +28,7 @@ class ApplicationsAPI(MethodView):
 
     @auth.required()
     def put(self, id):
-        operation = json.loads(request.data)["app"]["operation"]
+        operation = request.get_json()["app"]["operation"]
         app = applications.get(id)
         if not app:
             abort(404)

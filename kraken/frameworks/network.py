@@ -1,5 +1,3 @@
-import json
-
 from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
@@ -19,17 +17,17 @@ class NetworksAPI(MethodView):
             return jsonify(networks=[x.as_dict() for x in nets])
         else:
             return jsonify(network=nets.as_dict())
-    
+
     @auth.required()
     def post(self):
-        data = json.loads(request.data)["network"]
+        data = request.get_json()["network"]
         net = network.Connection(id=data["id"], config=data["config"])
         net.add()
         return jsonify(network=net.as_dict())
-    
+
     @auth.required()
     def put(self, id):
-        data = json.loads(request.data)["network"]
+        data = request.get_json()["network"]
         net = network.get_connections(id)
         if not id or not net:
             abort(404)
@@ -53,7 +51,7 @@ class NetworksAPI(MethodView):
             net.config = data["config"]
             net.update()
         return jsonify(network=net.as_dict())
-    
+
     @auth.required()
     def delete(self, id):
         net = network.get_connections(id)
@@ -77,8 +75,8 @@ def get_netifaces(id):
 
 
 network_view = NetworksAPI.as_view('networks_api')
-backend.add_url_rule('/api/system/networks', defaults={'id': None}, 
+backend.add_url_rule('/api/system/networks', defaults={'id': None},
     view_func=network_view, methods=['GET',])
 backend.add_url_rule('/api/system/networks', view_func=network_view, methods=['POST',])
-backend.add_url_rule('/api/system/networks/<string:id>', view_func=network_view, 
+backend.add_url_rule('/api/system/networks/<string:id>', view_func=network_view,
     methods=['GET', 'PUT', 'DELETE'])

@@ -48,17 +48,16 @@ def verify(token=None):
 
     if request.headers.get("X-API-Key", None):
         api_key = request.headers.get("X-API-Key")
-        data = config.get_all("api-keys")
-        for u in data:
-            for key in data[u]:
-                if key == api_key:
-                    user = users.get(name=u)
-                    if not user or not user.admin:
-                        resp = jsonify(message="Authorization required")
-                        resp.status_code = 401
-                        return resp
-                    else:
-                        return
+        data = secrets.get_all("api-keys")
+        for x in data:
+            if x["key"] == api_key:
+                user = users.get(name=x["user"])
+                if not user or not user.admin:
+                    resp = jsonify(message="Authorization required")
+                    resp.status_code = 401
+                    return resp
+                else:
+                    return
 
     if not token:
         token = request.headers.get("Authorization", None)

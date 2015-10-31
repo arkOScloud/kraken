@@ -1,4 +1,3 @@
-import json
 import pacman
 
 from flask import Response, Blueprint, jsonify, request, abort
@@ -24,11 +23,11 @@ class PackagesAPI(MethodView):
                 abort(404)
         else:
             return jsonify(packages=pacman.get_all())
-    
+
     @auth.required()
     def post(self):
         install, remove = [], []
-        data = json.loads(request.data)["packages"]
+        data = request.get_json()["packages"]
         for x in data:
             if x["operation"] == "install":
                 install.append(x["id"])
@@ -36,7 +35,7 @@ class PackagesAPI(MethodView):
                 remove.append(x["id"])
         id = as_job(self._operation, install, remove)
         return job_response(id)
-    
+
     def _operation(self, install, remove):
         message = Message()
         if install:
@@ -88,8 +87,8 @@ def process_info(info):
 
 
 packages_view = PackagesAPI.as_view('sites_api')
-backend.add_url_rule('/api/system/packages', defaults={'id': None}, 
+backend.add_url_rule('/api/system/packages', defaults={'id': None},
     view_func=packages_view, methods=['GET',])
 backend.add_url_rule('/api/system/packages', view_func=packages_view, methods=['POST',])
-backend.add_url_rule('/api/system/packages/<string:id>', view_func=packages_view, 
+backend.add_url_rule('/api/system/packages/<string:id>', view_func=packages_view,
     methods=['GET',])

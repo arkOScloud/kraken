@@ -1,5 +1,4 @@
 import base64
-import json
 
 from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
@@ -23,12 +22,12 @@ class BackupsAPI(MethodView):
         elif id or time:
             abort(404)
         return jsonify(backups=backups)
-    
+
     @auth.required()
-    def post(self, id, time):
+    def post(self, id):
         id = as_job(self._post, id)
         return job_response(id)
-    
+
     def _post(self, id):
         message = Message()
         message.update("info", "Backing up %s..." % id)
@@ -38,17 +37,17 @@ class BackupsAPI(MethodView):
             push_record("backups", b)
         except Exception, e:
             message.complete("error", "%s could not be backed up: %s" % (id, str(e)))
-    
+
     @auth.required()
     def put(self, id, time):
-        data = json.loads(request.data).get("backup")
+        data = request.get_json().get("backup")
         data["id"] = id+"/"+time
         if id and time and data:
             id = as_job(self._put, data)
             return job_response(id, data={"backup": data})
         else:
             abort(404)
-    
+
     def _put(self, data):
         message = Message()
         message.update("info", "Restoring %s..." % data["pid"])
@@ -58,7 +57,7 @@ class BackupsAPI(MethodView):
             push_record("backup", b)
         except Exception, e:
             message.complete("error", "%s could not be restored: %s" % (data["pid"], str(e)))
-    
+
     @auth.required()
     def delete(self, id, time):
         backup.remove(id, time)
@@ -72,9 +71,9 @@ def get_possible():
 
 
 backups_view = BackupsAPI.as_view('backups_api')
-backend.add_url_rule('/api/backups', defaults={'id': None, 'time': None}, 
+backend.add_url_rule('/api/backups', defaults={'id': None, 'time': None},
     view_func=backups_view, methods=['GET',])
 backend.add_url_rule('/api/backups/<string:id>', defaults={'time': None},
     view_func=backups_view, methods=['GET', 'POST',])
-backend.add_url_rule('/api/backups/<string:id>/<string:time>', view_func=backups_view, 
+backend.add_url_rule('/api/backups/<string:id>/<string:time>', view_func=backups_view,
     methods=['GET', 'PUT', 'DELETE'])

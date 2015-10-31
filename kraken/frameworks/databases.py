@@ -1,5 +1,3 @@
-import json
-
 from flask import make_response, Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
@@ -31,7 +29,7 @@ class DatabasesAPI(MethodView):
 
     @auth.required()
     def post(self):
-        data = json.loads(request.data)["database"]
+        data = request.get_json()["database"]
         manager = databases.get_managers(data["type_id"])
         try:
             db = manager.add_db(data["id"])
@@ -43,7 +41,7 @@ class DatabasesAPI(MethodView):
 
     @auth.required()
     def put(self, id):
-        data = json.loads(request.data)["database"]
+        data = request.get_json()["database"]
         db = databases.get(id)
         if not id or not db:
             abort(404)
@@ -84,7 +82,7 @@ class DatabaseUsersAPI(MethodView):
 
     @auth.required()
     def post(self):
-        data = json.loads(request.data)["database_user"]
+        data = request.get_json()["database_user"]
         manager = databases.get_managers(data["type"])
         try:
             u = manager.add_user(data["id"], data["passwd"])
@@ -96,7 +94,7 @@ class DatabaseUsersAPI(MethodView):
 
     @auth.required()
     def put(self, id):
-        data = json.loads(request.data)["database_user"]
+        data = request.get_json()["database_user"]
         u = databases.get_user(id)
         if not id or not u:
             abort(404)

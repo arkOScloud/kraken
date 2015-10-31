@@ -1,5 +1,3 @@
-import json
-
 from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
@@ -21,13 +19,13 @@ class DisksAPI(MethodView):
             return jsonify(filesystems=[x.as_dict() for x in disks])
         else:
             return jsonify(filesystem=disks.as_dict())
-    
+
     @auth.required()
     def post(self):
-        data = json.loads(request.data)["filesystem"]
+        data = request.get_json()["filesystem"]
         id = as_job(self._post, data)
         return job_response(id, data={"filesystem": data})
-    
+
     def _post(self, data):
         message = Message()
         message.update("info", "Creating virtual disk...")
@@ -47,10 +45,10 @@ class DisksAPI(MethodView):
                 raise
         message.complete("success", "Virtual disk created successfully")
         push_record("filesystem", disk.as_dict())
-    
+
     @auth.required()
     def put(self, id):
-        data = json.loads(request.data)["filesystem"]
+        data = request.get_json()["filesystem"]
         disk = filesystems.get(id)
         if not id or not disk:
             abort(404)
@@ -78,7 +76,7 @@ class DisksAPI(MethodView):
             resp.status_code = 422
             return resp
         return jsonify(filesystem=disk.as_dict(), message="Disk %s successfully"%op)
-    
+
     @auth.required()
     def delete(self, id):
         disk = filesystems.get(id)
@@ -94,8 +92,8 @@ def list_points():
     return jsonify(points=[x.as_dict() for x in filesystems.get_points()])
 
 disks_view = DisksAPI.as_view('disks_api')
-backend.add_url_rule('/api/system/filesystems', defaults={'id': None}, 
+backend.add_url_rule('/api/system/filesystems', defaults={'id': None},
     view_func=disks_view, methods=['GET',])
 backend.add_url_rule('/api/system/filesystems', view_func=disks_view, methods=['POST',])
-backend.add_url_rule('/api/system/filesystems/<string:id>', view_func=disks_view, 
+backend.add_url_rule('/api/system/filesystems/<string:id>', view_func=disks_view,
     methods=['GET', 'PUT', 'DELETE'])

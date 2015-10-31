@@ -1,5 +1,3 @@
-import json
-
 from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
@@ -20,17 +18,17 @@ class ServicesAPI(MethodView):
             return jsonify(services=[x.as_dict() for x in svcs if not any(y in x.name for y in ["systemd", "dbus"])])
         else:
             return jsonify(service=svcs.as_dict())
-    
+
     @auth.required()
     def post(self):
-        data = json.loads(request.data)["service"]
+        data = request.get_json()["service"]
         svc = services.Service(name=data["id"], cfg=data["cfg"])
         svc.add()
         return jsonify(service=svc.as_dict())
-    
+
     @auth.required()
     def put(self, id):
-        data = json.loads(request.data)["service"]
+        data = request.get_json()["service"]
         svc = services.get(id)
         if id and not svc:
             abort(404)
@@ -60,7 +58,7 @@ class ServicesAPI(MethodView):
             resp.status_code = 422
             return resp
         return jsonify(service=svc.as_dict())
-    
+
     @auth.required()
     def delete(self, id):
         svc = services.get(id)
@@ -71,8 +69,8 @@ class ServicesAPI(MethodView):
 
 
 services_view = ServicesAPI.as_view('services_api')
-backend.add_url_rule('/api/system/services', defaults={'id': None}, 
+backend.add_url_rule('/api/system/services', defaults={'id': None},
     view_func=services_view, methods=['GET',])
 backend.add_url_rule('/api/system/services', view_func=services_view, methods=['POST',])
-backend.add_url_rule('/api/system/services/<string:id>', view_func=services_view, 
+backend.add_url_rule('/api/system/services/<string:id>', view_func=services_view,
     methods=['GET', 'PUT', 'DELETE'])

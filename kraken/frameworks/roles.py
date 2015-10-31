@@ -1,5 +1,3 @@
-import json
-
 from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
@@ -22,7 +20,7 @@ class UsersAPI(MethodView):
 
     @auth.required()
     def post(self):
-        data = json.loads(request.data)["user"]
+        data = request.get_json()["user"]
         try:
             u = users.User(name=data["name"], first_name=data["first_name"],
                 last_name=data["last_name"], domain=data["domain"],
@@ -36,7 +34,7 @@ class UsersAPI(MethodView):
 
     @auth.required()
     def put(self, id):
-        data = json.loads(request.data)["user"]
+        data = request.get_json()["user"]
         u = users.get(id)
         if not u:
             abort(404)
@@ -81,7 +79,7 @@ class GroupsAPI(MethodView):
 
     @auth.required()
     def post(self):
-        data = json.loads(request.data)["group"]
+        data = request.get_json()["group"]
         g = groups.Group(name=data["name"], users=data["users"])
         try:
             g.add()
@@ -93,7 +91,7 @@ class GroupsAPI(MethodView):
 
     @auth.required()
     def put(self, id):
-        data = json.loads(request.data)["group"]
+        data = request.get_json()["group"]
         g = groups.get(id)
         if not g:
             abort(404)
@@ -133,7 +131,7 @@ class DomainsAPI(MethodView):
 
     @auth.required()
     def post(self):
-        data = json.loads(request.data)["domain"]
+        data = request.get_json()["domain"]
         d = domains.Domain(name=data["id"])
         try:
             d.add()

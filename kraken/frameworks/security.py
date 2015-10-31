@@ -1,5 +1,3 @@
-import json
-
 from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
@@ -23,7 +21,7 @@ class PolicyAPI(MethodView):
 
     @auth.required()
     def put(self, id):
-        data = json.loads(request.data)["policy"]
+        data = request.get_json()["policy"]
         policy = tracked_services.get(id)
         if not id or not policy:
             abort(404)
@@ -39,7 +37,7 @@ class DefenceAPI(MethodView):
 
     @auth.required()
     def put(self, id):
-        data = json.loads(request.data)["jail"]
+        data = request.get_json()["jail"]
         if data["operation"] == "enable":
             security.enable_all_def(data["name"])
         else:

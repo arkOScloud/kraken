@@ -1,5 +1,4 @@
 import grp
-import json
 import mimetypes
 import os
 import pwd
@@ -52,7 +51,7 @@ class FileManagerAPI(MethodView):
                 results.append(as_dict(os.path.join(path, filename)))
             return jsonify(files=results)
         else:
-            data = json.loads(request.data)["file"]
+            data = request.get_json()["file"]
             if not os.path.exists(path):
                 abort(404)
             if not os.path.isdir(path):
@@ -68,9 +67,10 @@ class FileManagerAPI(MethodView):
 
     @auth.required()
     def put(self, path):
-        data = json.loads(request.data)["file"]
+        data = request.get_json()["file"]
         if not os.path.exists(data["path"]):
             abort(404)
+        orig = as_dict(data["path"])
         if data["operation"] == "copy":
             if os.path.exists(os.path.join(data["newdir"], data["name"])):
                 data["name"] = data["name"]+"-copy"
@@ -85,8 +85,14 @@ class FileManagerAPI(MethodView):
             with open(data["path"], "w") as f:
                 f.write(data["data"])
             return jsonify(file=as_dict(data["path"]))
+        elif data["operation"] == "extract":
+            if not orig["type"] == "archive":
+                resp = jsonify(message="Not an archive")
+                resp.status_code = 422
+                return resp
+            extract(data["path"], os.path.dirname(data["path"]))
+            return jsonify(file=as_dict(data["path"]))
         elif data["operation"] == "props":
-            orig = as_dict(data["path"])
             if data["user"] != orig["user"] or data["group"] != orig["group"]:
                 uid, gid = None, None
                 u, g = users.get_system(data["user"]), groups.get_system(data["group"])
@@ -239,7 +245,10 @@ def as_dict(path, content=False):
         data["type"] = "block"
         data["icon"] = "fa-hdd-o"
     elif stat.S_ISREG(mode):
-        data["type"] = "file"
+        if name.endswith((".tar", ".gz", ".tar.gz", ".tgz", ".bz2", ".tar.bz2", ".tbz2", ".zip")):
+            data["type"] = "archive"
+        else:
+            data["type"] = "file"
         data["icon"] = guess_file_icon(name)
     else:
         data["type"] = "unknown"
@@ -287,7 +296,7 @@ def guess_file_icon(name):
         return "fa-file-powerpoint-o"
     elif name.endswith((".jpg", ".jpeg", ".png", ".gif", ".tif", ".tiff", ".bmp")):
         return "fa-file-image-o"
-    elif name.endswith((".zip", ".tar", ".gz", ".bz2", ".rar")):
+    elif name.endswith((".zip", ".tar", ".gz", ".bz2", ".rar", ".tgz", ".tbz2")):
         return "fa-file-archive-o"
     elif name.endswith((".doc", ".docx", ".odt")):
         return "fa-file-word-o"

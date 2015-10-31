@@ -1,7 +1,5 @@
-import json
-
 from kraken import auth
-from flask import Blueprint, jsonify, abort
+from flask import Blueprint, jsonify, abort, Response
 from arkos.utilities import random_string
 from redis_storage import storage
 

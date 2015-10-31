@@ -1,5 +1,3 @@
-import json
-
 from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
@@ -27,7 +25,7 @@ class CertificatesAPI(MethodView):
     @auth.required()
     def post(self):
         if request.headers.get('Content-Type').startswith("application/json"):
-            data = json.loads(request.data)["cert"]
+            data = request.get_json()["cert"]
             id = as_job(self._generate, data)
             return job_response(id, data={"cert": {"id": data["id"]}})
         elif request.headers.get('Content-Type').startswith("multipart/form-data"):
@@ -65,7 +63,7 @@ class CertificatesAPI(MethodView):
 
     @auth.required()
     def put(self, id):
-        data = json.loads(request.data)["cert"]
+        data = request.get_json()["cert"]
         cert = certificates.get(id)
         other_certs = [x for x in certificates.get() if x.id != id]
         if not id or not cert:
