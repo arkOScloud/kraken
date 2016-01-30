@@ -24,7 +24,7 @@ class BackupsAPI(MethodView):
         return jsonify(backups=backups)
 
     @auth.required()
-    def post(self, id):
+    def post(self, id, time):
         id = as_job(self._post, id)
         return job_response(id)
 

@@ -2,6 +2,7 @@ from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
 from kraken import auth
+from kraken.application import app
 from arkos.system import services
 from kraken.messages import Message
 
@@ -11,7 +12,17 @@ backend = Blueprint("services", __name__)
 class ServicesAPI(MethodView):
     @auth.required()
     def get(self, id):
-        svcs = services.get(id)
+        try:
+            svcs = services.get(id)
+        except services.ActionError, e:
+            if id:
+                app.logger.error("%s service status could not be obtained. Failed with error: %s" % (id, e.emsg))
+                resp = jsonify(message="%s service status could not be obtained." % id)
+            else:
+                app.logger.error("Service status could not be obtained. Failed with error: %s" % e.emsg)
+                resp = jsonify(message="Service status could not be obtained.")
+            resp.status_code = 422
+            return resp
         if id and not svcs:
             abort(404)
         if type(svcs) == list:
@@ -54,6 +65,7 @@ class ServicesAPI(MethodView):
                 tag = "disabled"
                 svc.disable()
         except services.ActionError, e:
+            app.logger.error("%s service could not be %s. Failed with error: %s" % (id, tag, e.emsg))
             resp = jsonify(message="%s service could not be %s." % (id, tag))
             resp.status_code = 422
             return resp
