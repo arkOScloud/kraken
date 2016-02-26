@@ -3,7 +3,7 @@ import os
 from flask import Blueprint, request, Response, current_app, jsonify
 
 from kraken import auth, genesis
-from kraken.utilities import as_job
+from kraken.jobs import as_job
 from kraken.messages import Message, push_record
 
 from arkos import config, applications, security
@@ -13,9 +13,9 @@ from arkos.system import filesystems
 backend = Blueprint("firstrun", __name__)
 
 
-def install(to_install):
+def install(job, to_install):
     errors = False
-    msg = Message()
+    msg = Message(job=job)
     for x in to_install:
         a = applications.get(x)
         try:
@@ -46,6 +46,7 @@ def firstrun():
         if not os.path.exists('/etc/cron.d'):
             os.mkdir('/etc/cron.d')
         with open('/etc/cron.d/resize', 'w') as f:
+            f.write('@reboot root e2fsck -fy /dev/mmcblk0p%s\n'%part)
             f.write('@reboot root resize2fs /dev/mmcblk0p%s\n'%part)
             f.write('@reboot root rm /etc/cron.d/resize\n')
             f.close()

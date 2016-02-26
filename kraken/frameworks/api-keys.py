@@ -1,11 +1,8 @@
-import base64
-import hashlib
-import random
-
 from flask import make_response, Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
 from kraken import auth
+from kraken.utilities import genAPIKey
 from arkos import secrets
 
 backend = Blueprint("api_keys", __name__)
@@ -35,11 +32,6 @@ class APIKeysAPI(MethodView):
                 secrets.save()
                 break
         return Response(status=204)
-
-
-def genAPIKey():
-    return base64.b64encode(hashlib.sha256(str(random.getrandbits(256))).digest(),
-        random.choice(['rA','aZ','gQ','hH','hG','aR','DD'])).rstrip('==')
 
 
 keys_view = APIKeysAPI.as_view('keys_api')

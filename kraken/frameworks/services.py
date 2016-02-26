@@ -4,7 +4,6 @@ from flask.views import MethodView
 from kraken import auth
 from kraken.application import app
 from arkos.system import services
-from kraken.messages import Message
 
 backend = Blueprint("services", __name__)
 
@@ -26,16 +25,16 @@ class ServicesAPI(MethodView):
         if id and not svcs:
             abort(404)
         if type(svcs) == list:
-            return jsonify(services=[x.as_dict() for x in svcs if not any(y in x.name for y in ["systemd", "dbus"])])
+            return jsonify(services=[x.serialized for x in svcs if not any(y in x.name for y in ["systemd", "dbus"])])
         else:
-            return jsonify(service=svcs.as_dict())
+            return jsonify(service=svcs.serialized)
 
     @auth.required()
     def post(self):
         data = request.get_json()["service"]
         svc = services.Service(name=data["id"], cfg=data["cfg"])
         svc.add()
-        return jsonify(service=svc.as_dict())
+        return jsonify(service=svc.serialized)
 
     @auth.required()
     def put(self, id):
@@ -69,7 +68,7 @@ class ServicesAPI(MethodView):
             resp = jsonify(message="%s service could not be %s." % (id, tag))
             resp.status_code = 422
             return resp
-        return jsonify(service=svc.as_dict())
+        return jsonify(service=svc.serialized)
 
     @auth.required()
     def delete(self, id):

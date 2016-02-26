@@ -4,7 +4,7 @@ from flask.views import MethodView
 from kraken import auth
 from arkos.system import filesystems
 from kraken.messages import Message, push_record
-from kraken.utilities import as_job, job_response
+from kraken.jobs import as_job, job_response
 
 backend = Blueprint("filesystems", __name__)
 
@@ -16,9 +16,9 @@ class DisksAPI(MethodView):
         if id and not disks:
             abort(404)
         if type(disks) == list:
-            return jsonify(filesystems=[x.as_dict() for x in disks])
+            return jsonify(filesystems=[x.serialized for x in disks])
         else:
-            return jsonify(filesystem=disks.as_dict())
+            return jsonify(filesystem=disks.serialized)
 
     @auth.required()
     def post(self):
@@ -26,8 +26,8 @@ class DisksAPI(MethodView):
         id = as_job(self._post, data)
         return job_response(id, data={"filesystem": data})
 
-    def _post(self, data):
-        message = Message()
+    def _post(self, job, data):
+        message = Message(job=job)
         message.update("info", "Creating virtual disk...")
         disk = filesystems.VirtualDisk(id=data["id"], size=data["size"])
         try:
@@ -44,7 +44,7 @@ class DisksAPI(MethodView):
                 message.complete("error", "Virtual disk could not be encrypted: %s" % str(e))
                 raise
         message.complete("success", "Virtual disk created successfully")
-        push_record("filesystem", disk.as_dict())
+        push_record("filesystem", disk.serialized)
 
     @auth.required()
     def put(self, id):
@@ -75,7 +75,7 @@ class DisksAPI(MethodView):
             resp = jsonify(message="Operation failed: %s" % str(e))
             resp.status_code = 422
             return resp
-        return jsonify(filesystem=disk.as_dict(), message="Disk %s successfully"%op)
+        return jsonify(filesystem=disk.serialized, message="Disk %s successfully"%op)
 
     @auth.required()
     def delete(self, id):
@@ -89,7 +89,7 @@ class DisksAPI(MethodView):
 @backend.route('/api/points')
 @auth.required()
 def list_points():
-    return jsonify(points=[x.as_dict() for x in filesystems.get_points()])
+    return jsonify(points=[x.serialized for x in filesystems.get_points()])
 
 disks_view = DisksAPI.as_view('disks_api')
 backend.add_url_rule('/api/system/filesystems', defaults={'id': None},

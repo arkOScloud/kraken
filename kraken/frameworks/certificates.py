@@ -4,7 +4,7 @@ from flask.views import MethodView
 from kraken import auth
 from arkos import certificates, websites, applications
 from kraken.messages import Message, push_record
-from kraken.utilities import as_job, job_response
+from kraken.jobs import as_job, job_response
 
 backend = Blueprint("certs", __name__)
 
@@ -18,9 +18,9 @@ class CertificatesAPI(MethodView):
         if id and not certs:
             abort(404)
         if type(certs) == list:
-            return jsonify(certs=[x.as_dict() for x in certs])
+            return jsonify(certs=[x.serialized for x in certs])
         else:
-            return jsonify(cert=certs.as_dict())
+            return jsonify(cert=certs.serialized)
 
     @auth.required()
     def post(self):
@@ -37,26 +37,26 @@ class CertificatesAPI(MethodView):
         else:
             abort(400)
 
-    def _generate(self, data):
-        message = Message()
+    def _generate(self, job, data):
+        message = Message(job=job)
         message.update("info", "Generating certificate...")
         try:
             cert = certificates.generate_certificate(data["id"], data["domain"],
                 data["country"], data["state"], data["locale"], data["email"],
                 data["keytype"], data["keylength"], message)
             message.complete("success", "Certificate generated successfully")
-            push_record("certs", cert.as_dict())
+            push_record("certs", cert.serialized)
         except Exception, e:
             message.complete("error", "Certificate could not be generated: %s" % str(e))
             raise
 
-    def _upload(self, name, files):
-        message = Message()
+    def _upload(self, job, name, files):
+        message = Message(job=job)
         message.update("info", "Uploading certificate...")
         try:
             cert = certificates.upload_certificate(name, files[0], files[1], files[2], message)
             message.complete("success", "Certificate uploaded successfully")
-            push_record("certs", cert.as_dict())
+            push_record("certs", cert.serialized)
         except Exception, e:
             message.complete("error", "Certificate could not be uploaded: %s" % str(e))
             raise
@@ -72,14 +72,14 @@ class CertificatesAPI(MethodView):
             for y in data["assigns"]:
                 if y in x.assigns:
                     x.unassign(y)
-                    push_record("certs", x.as_dict())
+                    push_record("certs", x.serialized)
         for x in cert.assigns:
             if not x in data["assigns"]:
                 cert.unassign(x)
         for x in data["assigns"]:
             if not x in cert.assigns:
                 cert.assign(x)
-        return jsonify(cert=cert.as_dict(), message="Certificate updated successfully")
+        return jsonify(cert=cert.serialized, message="Certificate updated successfully")
 
     @auth.required()
     def delete(self, id):
@@ -106,9 +106,9 @@ class CertificateAuthoritiesAPI(MethodView):
             resp.headers["Content-Disposition"] = "attachment; filename=%s.pem" % id
             return resp
         if type(certs) == list:
-            return jsonify(certauths=[x.as_dict() for x in certs])
+            return jsonify(certauths=[x.serialized for x in certs])
         else:
-            return jsonify(certauth=certs.as_dict())
+            return jsonify(certauth=certs.serialized)
 
     @auth.required()
     def delete(self, id):

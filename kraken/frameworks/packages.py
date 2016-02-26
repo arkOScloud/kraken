@@ -4,7 +4,7 @@ from flask import Response, Blueprint, jsonify, request, abort
 from flask.views import MethodView
 
 from kraken import auth
-from kraken.utilities import as_job, job_response
+from kraken.jobs import as_job, job_response
 from kraken.messages import Message, push_record, remove_record
 
 backend = Blueprint("packages", __name__)
@@ -36,8 +36,8 @@ class PackagesAPI(MethodView):
         id = as_job(self._operation, install, remove)
         return job_response(id)
 
-    def _operation(self, install, remove):
-        message = Message()
+    def _operation(self, job, install, remove):
+        message = Message(job=job)
         if install:
             try:
                 pacman.refresh()

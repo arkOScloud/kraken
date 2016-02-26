@@ -7,8 +7,9 @@ backend = Blueprint("messages", __name__)
 
 
 class Message:
-    def __init__(self, cls="", msg="", head=None):
+    def __init__(self, cls="", msg="", head=None, job=None):
         self.id = random_string()[0:10]
+        self.job = job
         if cls and msg:
             data = {"id": self.id, "class": cls, "message": msg, "headline": head,
                 "complete": True}
@@ -16,16 +17,22 @@ class Message:
             data = {"id": self.id, "class": "info", "headline": None,
                 "message": "Please wait...", "complete": False}
         storage.append("genesis:messages", data)
+        if self.job:
+            self.job.update_message(cls, msg, head)
 
     def update(self, cls, msg, head=None):
         data = {"id": self.id, "class": cls, "message": msg, "headline": head,
             "complete": False}
         storage.append("genesis:messages", data)
+        if self.job:
+            self.job.update_message(cls, msg, head)
 
     def complete(self, cls, msg, head=None):
         data = {"id": self.id, "class": cls, "message": msg, "headline": head,
             "complete": True}
         storage.append("genesis:messages", data)
+        if self.job:
+            self.job.update_message(cls, msg, head)
 
 
 @backend.route('/api/genesis')
@@ -58,7 +65,9 @@ def get_job(id):
     job = storage.get_all("job:%s" % id)
     if not job:
         abort(404)
-    return Response(status=job["status"])
+    response = jsonify(**job)
+    response.status_code = int(job["status"])
+    return response
 
 def push_record(name, model):
     storage.append("genesis:pushes", {"model": name, "record": model})

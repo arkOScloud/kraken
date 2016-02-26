@@ -3,7 +3,6 @@ from flask.views import MethodView
 
 from kraken import auth
 from arkos import security, tracked_services
-from kraken.messages import Message
 
 backend = Blueprint("security", __name__)
 
@@ -15,9 +14,9 @@ class PolicyAPI(MethodView):
         if id and not svcs:
             abort(404)
         if type(svcs) == list:
-            return jsonify(policies=[x.as_dict() for x in svcs])
+            return jsonify(policies=[x.serialized for x in svcs])
         else:
-            return jsonify(policy=svcs.as_dict())
+            return jsonify(policy=svcs.serialized)
 
     @auth.required()
     def put(self, id):
@@ -27,7 +26,7 @@ class PolicyAPI(MethodView):
             abort(404)
         policy.policy = data["policy"]
         policy.save()
-        return jsonify(policy=policy.as_dict())
+        return jsonify(policy=policy.serialized)
 
 
 class DefenceAPI(MethodView):

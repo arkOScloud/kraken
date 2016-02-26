@@ -6,7 +6,7 @@ from flask.views import MethodView
 from kraken import auth
 from arkos import backup
 from kraken.messages import Message, push_record
-from kraken.utilities import as_job, job_response
+from kraken.jobs import as_job, job_response
 
 backend = Blueprint("backup", __name__)
 
@@ -25,11 +25,12 @@ class BackupsAPI(MethodView):
 
     @auth.required()
     def post(self, id, time):
-        id = as_job(self._post, id)
+        data = request.get_json()["backup"]
+        id = as_job(self._post, data)
         return job_response(id)
 
-    def _post(self, id):
-        message = Message()
+    def _post(self, job, id):
+        message = Message(job=job)
         message.update("info", "Backing up %s..." % id)
         try:
             b = backup.create(id)
@@ -48,8 +49,8 @@ class BackupsAPI(MethodView):
         else:
             abort(404)
 
-    def _put(self, data):
-        message = Message()
+    def _put(self, job, data):
+        message = Message(job=job)
         message.update("info", "Restoring %s..." % data["pid"])
         try:
             b = backup.restore(data)

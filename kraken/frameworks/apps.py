@@ -6,7 +6,7 @@ from flask.views import MethodView
 from kraken import auth
 from arkos import applications
 from kraken.messages import Message, push_record
-from kraken.utilities import as_job, job_response
+from kraken.jobs import as_job, job_response
 
 backend = Blueprint("apps", __name__)
 
@@ -22,9 +22,9 @@ class ApplicationsAPI(MethodView):
         if id and not apps:
             abort(404)
         if type(apps) == list:
-            return jsonify(apps=[x.as_dict() for x in apps])
+            return jsonify(apps=[x.serialized for x in apps])
         else:
-            return jsonify(app=apps.as_dict())
+            return jsonify(app=apps.serialized)
 
     @auth.required()
     def put(self, id):
@@ -34,7 +34,7 @@ class ApplicationsAPI(MethodView):
             abort(404)
         if operation == "install":
             if app.installed and not (hasattr(app, "upgradable") and app.upgradable):
-                return jsonify(app=app.as_dict())
+                return jsonify(app=app.serialized)
             id = as_job(self._install, app)
         elif operation == "uninstall":
             if not app.installed:
@@ -46,29 +46,29 @@ class ApplicationsAPI(MethodView):
             resp = jsonify(message="Unknown operation specified")
             resp.status_code = 422
             return resp
-        data = app.as_dict()
+        data = app.serialized
         data["is_ready"] = False
         return job_response(id, {"app": data})
 
-    def _install(self, app):
-        message = Message()
+    def _install(self, job, app):
+        message = Message(job=job)
         try:
             app.install(message=message, force=True)
             smsg = "%s installed successfully." % app.name
             if app.type == "website":
                 smsg += " Go to 'My Applications > %s > Add Website' to set up a site using this app." % app.name
             message.complete("success", smsg)
-            push_record("app", app.as_dict())
+            push_record("app", app.serialized)
         except Exception, e:
             message.complete("error", "%s could not be installed: %s" % (app.name, str(e)))
             raise
 
-    def _uninstall(self, app):
-        message = Message()
+    def _uninstall(self, job, app):
+        message = Message(job=job)
         try:
             app.uninstall(message=message)
             message.complete("success", "%s uninstalled successfully" % app.name)
-            push_record("app", app.as_dict())
+            push_record("app", app.serialized)
         except Exception, e:
             message.complete("error", "%s could not be uninstalled: %s" % (app.name, str(e)))
             raise

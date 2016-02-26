@@ -14,9 +14,9 @@ class UsersAPI(MethodView):
         if id and not u:
             abort(404)
         if type(u) == list:
-            return jsonify(users=[x.as_dict() for x in u])
+            return jsonify(users=[x.serialized for x in u])
         else:
-            return jsonify(user=u.as_dict())
+            return jsonify(user=u.serialized)
 
     @auth.required()
     def post(self):
@@ -30,7 +30,7 @@ class UsersAPI(MethodView):
             resp = jsonify(message="User couldn't be added: %s" % str(e))
             resp.status_code = 422
             return resp
-        return jsonify(user=u.as_dict(), message="User %s added successfully" % str(u.name))
+        return jsonify(user=u.serialized, message="User %s added successfully" % str(u.name))
 
     @auth.required()
     def put(self, id):
@@ -50,7 +50,7 @@ class UsersAPI(MethodView):
             resp = jsonify(message="User couldn't be updated: %s" % str(e))
             resp.status_code = 422
             return resp
-        return jsonify(user=u.as_dict(), message="User %s updated successfully" % u.name)
+        return jsonify(user=u.serialized, message="User %s updated successfully" % u.name)
 
     @auth.required()
     def delete(self, id):
@@ -73,9 +73,9 @@ class GroupsAPI(MethodView):
         if id and not g:
             abort(404)
         if type(g) == list:
-            return jsonify(groups=[x.as_dict() for x in g])
+            return jsonify(groups=[x.serialized for x in g])
         else:
-            return jsonify(group=g.as_dict())
+            return jsonify(group=g.serialized)
 
     @auth.required()
     def post(self):
@@ -87,7 +87,7 @@ class GroupsAPI(MethodView):
             resp = jsonify(message="Group couldn't be added: %s" % str(e))
             resp.status_code = 422
             return resp
-        return jsonify(group=g.as_dict(), message="Group %s added successfully" % str(g.name))
+        return jsonify(group=g.serialized, message="Group %s added successfully" % str(g.name))
 
     @auth.required()
     def put(self, id):
@@ -102,7 +102,7 @@ class GroupsAPI(MethodView):
             resp = jsonify(message="Group couldn't be updated: %s" % str(e))
             resp.status_code = 422
             return resp
-        return jsonify(group=g.as_dict(), message="Group %s updated successfully" % g.name)
+        return jsonify(group=g.serialized, message="Group %s updated successfully" % g.name)
 
     @auth.required()
     def delete(self, id):
@@ -125,9 +125,9 @@ class DomainsAPI(MethodView):
         if id and not d:
             abort(404)
         if type(d) == list:
-            return jsonify(domains=[x.as_dict() for x in d])
+            return jsonify(domains=[x.serialized for x in d])
         else:
-            return jsonify(domain=d.as_dict())
+            return jsonify(domain=d.serialized)
 
     @auth.required()
     def post(self):
@@ -139,7 +139,7 @@ class DomainsAPI(MethodView):
             resp = jsonify(message="Domain couldn't be added: %s" % str(e))
             resp.status_code = 422
             return resp
-        return jsonify(domain=d.as_dict(), message="Domain %s added successfully" % str(d.name))
+        return jsonify(domain=d.serialized, message="Domain %s added successfully" % str(d.name))
 
     @auth.required()
     def delete(self, id):

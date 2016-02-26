@@ -14,7 +14,7 @@ from werkzeug import secure_filename
 from flask import Response, Blueprint, jsonify, request, abort
 from flask.views import MethodView
 from kraken.messages import remove_record
-from kraken.utilities import as_job, job_response
+from kraken.jobs import as_job, job_response
 
 backend = Blueprint("filemgr", __name__)
 
@@ -153,9 +153,9 @@ class SharingAPI(MethodView):
         if id and not shares:
             abort(404)
         if type(shares) == list:
-            return jsonify(shares=[x.as_dict() for x in shares])
+            return jsonify(shares=[x.serialized for x in shares])
         else:
-            return jsonify(share=shares.as_dict())
+            return jsonify(share=shares.serialized)
 
     @auth.required()
     def post(self):
@@ -163,7 +163,7 @@ class SharingAPI(MethodView):
         id = random_string()
         share = shared_files.Share(id, data["path"], data.get("expires", 0))
         share.add()
-        return jsonify(share=share.as_dict())
+        return jsonify(share=share.serialized)
 
     @auth.required()
     def put(self, id):
@@ -175,7 +175,7 @@ class SharingAPI(MethodView):
             share.update_expiry(data["expires_at"])
         else:
             share.update_expiry(False)
-        return jsonify(share=share.as_dict())
+        return jsonify(share=share.serialized)
 
     @auth.required()
     def delete(self, id):

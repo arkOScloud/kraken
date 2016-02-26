@@ -23,9 +23,9 @@ class DatabasesAPI(MethodView):
             resp.headers["Content-Disposition"] = "attachment; filename=%s.sql" % id
             return resp
         if type(dbs) == list:
-            return jsonify(databases=[x.as_dict() for x in dbs])
+            return jsonify(databases=[x.serialized for x in dbs])
         else:
-            return jsonify(database=dbs.as_dict())
+            return jsonify(database=dbs.serialized)
 
     @auth.required()
     def post(self):
@@ -37,7 +37,7 @@ class DatabasesAPI(MethodView):
             resp = jsonify(message="Database couldn't be added: %s" % str(e))
             resp.status_code = 422
             return resp
-        return jsonify(database=db.as_dict(), message="Database %s added successfully" % str(db.id))
+        return jsonify(database=db.serialized, message="Database %s added successfully" % str(db.id))
 
     @auth.required()
     def put(self, id):
@@ -76,9 +76,9 @@ class DatabaseUsersAPI(MethodView):
         if id and not u:
             abort(404)
         if type(u) == list:
-            return jsonify(database_users=[x.as_dict() for x in u])
+            return jsonify(database_users=[x.serialized for x in u])
         else:
-            return jsonify(database_user=u.as_dict())
+            return jsonify(database_user=u.serialized)
 
     @auth.required()
     def post(self):
@@ -90,7 +90,7 @@ class DatabaseUsersAPI(MethodView):
             resp = jsonify(message="Database user couldn't be added: %s" % str(e))
             resp.status_code = 422
             return resp
-        return jsonify(database_user=u.as_dict(), message="Database user %s added successfully" % str(u.id))
+        return jsonify(database_user=u.serialized, message="Database user %s added successfully" % str(u.id))
 
     @auth.required()
     def put(self, id):
@@ -101,7 +101,7 @@ class DatabaseUsersAPI(MethodView):
         elif not data.get("operation"):
             abort(400)
         u.chperm(data["operation"], databases.get(data["database"]))
-        return jsonify(database_user=u.as_dict())
+        return jsonify(database_user=u.serialized)
 
     @auth.required()
     def delete(self, id):
@@ -123,7 +123,7 @@ def list_types():
     dbs = databases.get_managers()
     if request.args.get("rescan", None):
         dbs = databases.scan_managers()
-    return jsonify(database_types=[x.as_dict() for x in dbs])
+    return jsonify(database_types=[x.serialized for x in dbs])
 
 
 dbs_view = DatabasesAPI.as_view('dbs_api')
