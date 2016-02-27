@@ -102,6 +102,10 @@ def required():
         return decorator
     return wrapper
 
+@backend.route("/api/ping")
+def ping():
+    return jsonify(ping="pong")
+
 @backend.route("/api/token", methods=["POST"])
 def get_token():
     data = request.get_json()
