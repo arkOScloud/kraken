@@ -37,13 +37,11 @@ def run_daemon(environment, log_level, config_file, secrets_file, policies_file)
     app.logger.info("Using config file at %s" % config.filename)
     app.conf = config
 
-    arch = detect_architecture()
+    arch = app.conf.get("enviro", "arch")
+    board = app.conf.get("enviro", "board")
     platform = detect_platform()
-    app.logger.info('Detected architecture/hardware: %s, %s' % arch)
+    app.logger.info('Detected architecture/hardware: %s, %s' % (arch, board))
     app.logger.info('Detected platform: %s' % platform)
-    app.conf.set("enviro", "version", arkos.version)
-    app.conf.set("enviro", "arch", arch[0])
-    app.conf.set("enviro", "board", arch[1])
     app.conf.set("enviro", "run", environment)
     app.logger.info('Environment: %s' % environment)
 

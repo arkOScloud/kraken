@@ -80,7 +80,7 @@ def firstrun():
                 f.write('options sunxi_gmac mac_str="%s"\n' % data.get("cubie_mac"))
     if data.get("install"):
         as_job(install, data["install"])
-    security.initialize_fw()
+    security.initialize_firewall()
     rootpwd = random_string()[:16]
     shell("passwd root", stdin="%s\n%s\n" % (rootpwd,rootpwd))
     return jsonify(rootpwd=rootpwd)
