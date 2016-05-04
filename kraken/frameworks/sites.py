@@ -1,9 +1,17 @@
+"""
+Endpoints for management of arkOS websites.
+
+arkOS Kraken
+(c) 2016 CitizenWeb
+Written by Jacob Cook
+Licensed under GPLv3, see LICENSE.md
+"""
+
 from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
 from kraken import auth
-from kraken.application import app
-from arkos import applications, websites, certificates, tracked_services
+from arkos import applications, websites, certificates
 from kraken.messages import Message, push_record, remove_record
 from kraken.jobs import as_job, job_response
 
@@ -36,12 +44,12 @@ class WebsitesAPI(MethodView):
         site = site(data["id"], data["addr"], data["port"])
         try:
             specialmsg = site.install(sapp, data["extra_data"], True, message)
-            message.complete("success", "%s site installed successfully" % site.meta.name, head="Installing website")
+            message.complete("success", "{0} site installed successfully".format(site.meta.name), head="Installing website")
             if specialmsg:
                 Message("info", specialmsg)
             push_record("website", site.serialized)
-        except Exception, e:
-            message.complete("error", "%s could not be installed: %s" % (data["id"], str(e)), head="Installing website")
+        except Exception as e:
+            message.complete("error", "{0} could not be installed: {1}".format(data["id"], str(e)), head="Installing website")
             remove_record("website", data["id"])
             raise
 
@@ -80,11 +88,11 @@ class WebsitesAPI(MethodView):
         site = websites.get(id)
         try:
             site.remove(message)
-            message.complete("success", "%s site removed successfully" % site.meta.name, head="Removing website")
+            message.complete("success", "{0} site removed successfully".format(site.meta.name), head="Removing website")
             remove_record("website", id)
             remove_record("policy", id)
-        except Exception, e:
-            message.complete("error", "%s could not be removed: %s" % (id, str(e)), head="Removing website")
+        except Exception as e:
+            message.complete("error", "{0} could not be removed: {1}".format(id, str(e)), head="Removing website")
             raise
 
 
@@ -99,7 +107,7 @@ def perform_action(id, action):
     actionfunc = getattr(w, action)
     try:
         actionfunc()
-    except Exception, e:
+    except Exception as e:
         resp = jsonify(message=str(e))
         resp.status_code = 500
         return resp

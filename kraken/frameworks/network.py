@@ -1,3 +1,12 @@
+"""
+Endpoints for management of network settings.
+
+arkOS Kraken
+(c) 2016 CitizenWeb
+Written by Jacob Cook
+Licensed under GPLv3, see LICENSE.md
+"""
+
 from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
@@ -43,7 +52,7 @@ class NetworksAPI(MethodView):
                     net.disable()
                 else:
                     abort(422)
-            except Exception, e:
+            except Exception as e:
                 resp = jsonify(message=str(e))
                 resp.status_code = 500
                 return resp

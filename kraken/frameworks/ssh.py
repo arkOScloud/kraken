@@ -1,3 +1,12 @@
+"""
+Endpoints for management of SSH keys.
+
+arkOS Kraken
+(c) 2016 CitizenWeb
+Written by Jacob Cook
+Licensed under GPLv3, see LICENSE.md
+"""
+
 import glob
 import os
 
@@ -39,20 +48,22 @@ class SSHKeysAPI(MethodView):
         data = request.get_json()["ssh_key"]
         key = {"user": data["user"], "key": data["key"]}
         user = users.get(name=key["user"])
-        if not os.path.exists("/home/%s/.ssh" % data["user"]):
-            os.makedirs("/home/%s/.ssh" % data["user"])
-            os.chown("/home/%s/.ssh" % data["user"], user.uid, 100)
-            os.chmod("/home/%s/.ssh" % data["user"], 0700)
-        if not os.path.exists("/home/%s/.ssh/authorized_keys" % data["user"]):
-            with open("/home/%s/.ssh/authorized_keys" % data["user"], "w") as f:
+        ssh_path = "/home/{0}/.ssh".format(data["user"])
+        akeys_path = os.path.join(ssh_path, "authorized_keys")
+        if not os.path.exists(ssh_path):
+            os.makedirs(ssh_path)
+            os.chown(ssh_path, user.uid, 100)
+            os.chmod(ssh_path, 0o700)
+        if not os.path.exists(akeys_path):
+            with open(akeys_path, "w") as f:
                 f.write(data["key"])
                 if not data["key"].endswith("\n"):
                     f.write("\n")
             key["id"] = key["user"]+"-"+data["key"].split()[1][:10]
-            os.chown("/home/%s/.ssh/authorized_keys" % key["user"], user.uid, 100)
-            os.chmod("/home/%s/.ssh/authorized_keys" % key["user"], 0600)
+            os.chown(akeys_path, user.uid, 100)
+            os.chmod(akeys_path, 0o600)
         else:
-            with open("/home/%s/.ssh/authorized_keys" % data["user"], "r+") as f:
+            with open(akeys_path, "r+") as f:
                 fc = f.read()
                 if fc and not fc.endswith("\n"):
                     f.write("\n")
@@ -61,20 +72,21 @@ class SSHKeysAPI(MethodView):
                     f.write("\n")
                 f.seek(0)
                 key["id"] = key["user"]+"-"+data["key"].split()[1][:10]
-        return jsonify(ssh_key=key, message="SSH key for %s added successfully" % data["user"])
+        return jsonify(ssh_key=key, message="SSH key for {0} added successfully".format(data["user"]))
 
     @auth.required()
     def delete(self, id):
         user, ldat = id.rsplit("-", 1)
-        if not glob.glob("/home/%s/.ssh/authorized_keys" % user):
+        akeys_path = "/home/{0}/.ssh/authorized_keys".format(user)
+        if not glob.glob(akeys_path):
             abort(404)
-        with open("/home/%s/.ssh/authorized_keys" % user, "r") as f:
+        with open(akeys_path, "r") as f:
             data = []
             for x in f.readlines():
                 if x.split() and ldat == x.split()[1][:10]:
                     continue
                 data.append(x)
-        with open("/home/%s/.ssh/authorized_keys" % user, "w") as f:
+        with open(akeys_path, "w") as f:
             f.writelines(data)
         return Response(status=204)
 

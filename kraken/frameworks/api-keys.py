@@ -1,4 +1,13 @@
-from flask import make_response, Response, Blueprint, abort, jsonify, request
+"""
+Endpoints for management of Kraken API keys.
+
+arkOS Kraken
+(c) 2016 CitizenWeb
+Written by Jacob Cook
+Licensed under GPLv3, see LICENSE.md
+"""
+
+from flask import Response, Blueprint, jsonify, request
 from flask.views import MethodView
 
 from kraken import auth
@@ -35,6 +44,7 @@ class APIKeysAPI(MethodView):
 
 
 keys_view = APIKeysAPI.as_view('keys_api')
-backend.add_url_rule('/api/api_keys', view_func=keys_view, methods=['GET', 'POST'])
+backend.add_url_rule('/api/api_keys', view_func=keys_view,
+                     methods=['GET', 'POST'])
 backend.add_url_rule('/api/api_keys/<string:id>', view_func=keys_view,
-    methods=['DELETE',])
+                     methods=['DELETE', ])

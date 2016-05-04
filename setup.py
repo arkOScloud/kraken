@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='arkos-kraken',
-    version='0.7.2',
+    version='0.8.0',
     install_requires=[
         'redis',
         'itsdangerous'

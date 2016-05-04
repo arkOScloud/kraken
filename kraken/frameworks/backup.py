@@ -1,4 +1,11 @@
-import base64
+"""
+Endpoints for management of arkOS backups.
+
+arkOS Kraken
+(c) 2016 CitizenWeb
+Written by Jacob Cook
+Licensed under GPLv3, see LICENSE.md
+"""
 
 from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
@@ -31,13 +38,13 @@ class BackupsAPI(MethodView):
 
     def _post(self, job, id):
         message = Message(job=job)
-        message.update("info", "Backing up %s..." % id)
+        message.update("info", "Backing up {0}...".format(id))
         try:
             b = backup.create(id)
-            message.complete("success", "%s backed up successfully" % id)
+            message.complete("success", "{0} backed up successfully".format(id))
             push_record("backups", b)
-        except Exception, e:
-            message.complete("error", "%s could not be backed up: %s" % (id, str(e)))
+        except Exception as e:
+            message.complete("error", "{0} could not be backed up: {1}".format(id, str(e)))
 
     @auth.required()
     def put(self, id, time):
@@ -51,13 +58,13 @@ class BackupsAPI(MethodView):
 
     def _put(self, job, data):
         message = Message(job=job)
-        message.update("info", "Restoring %s..." % data["pid"])
+        message.update("info", "Restoring {0}...".format(data["pid"]))
         try:
             b = backup.restore(data)
-            message.complete("success", "%s restored successfully" % b["pid"])
+            message.complete("success", "{0} restored successfully".format(b["pid"]))
             push_record("backup", b)
-        except Exception, e:
-            message.complete("error", "%s could not be restored: %s" % (data["pid"], str(e)))
+        except Exception as e:
+            message.complete("error", "{0} could not be restored: {1}".format(data["pid"], str(e)))
 
     @auth.required()
     def delete(self, id, time):

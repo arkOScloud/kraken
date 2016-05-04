@@ -1,7 +1,17 @@
-from itsdangerous import TimedJSONWebSignatureSerializer, SignatureExpired, BadSignature
+"""
+Classes and functions to manage API authentication and authorization.
+
+arkOS Kraken
+(c) 2016 CitizenWeb
+Written by Jacob Cook
+Licensed under GPLv3, see LICENSE.md
+"""
+
+from itsdangerous import TimedJSONWebSignatureSerializer, SignatureExpired
+from itsdangerous import BadSignature
 from functools import wraps
 
-from arkos import config
+from arkos import config, secrets
 from arkos.system import users, systemtime
 from flask import current_app, Blueprint, request, jsonify
 
@@ -9,17 +19,28 @@ backend = Blueprint("auth", __name__)
 
 
 class AnonymousUser:
+    """Dummy class to represent an anonymous user of the API."""
+
     def __init__(self):
+        """Initialize."""
         self.name = "anonymous"
         self.first_name = "Anonymous"
         self.last_name = ""
         self.admin = True
 
     def verify_passwd(self, passwd):
+        """Verify password. Always true since anonymous."""
         return True
 
 
 def create_token(user):
+    """
+    Create a JSON Web Token (JWT) for the specified user.
+
+    :param User user: an arkOS user
+    :returns: JSON Web Token (JWT)
+    :rtype: str
+    """
     iat = systemtime.get_unix_time()
     try:
         offset = systemtime.get_offset()
@@ -27,7 +48,9 @@ def create_token(user):
             systemtime.set_datetime()
             iat = systemtime.get_unix_time()
     except:
-        current_app.logger.warning("System time is not accurate or could not be verified. Access tokens will not expire.")
+        twarn = ("System time is not accurate or could not be verified."
+                 " Access tokens will not expire.")
+        current_app.logger.warning(twarn)
         iat = None
     payload = {
         "uid": user.name,
@@ -37,12 +60,19 @@ def create_token(user):
     if iat:
         payload["iat"] = iat
         payload["exp"] = iat + config.get("genesis", "token_valid_for", 3600)
-    tjwss = TimedJSONWebSignatureSerializer(secret_key=current_app.config["SECRET_KEY"],
-        expires_in=config.get("genesis", "token_valid_for", 3600),
-        algorithm_name="HS256")
+    tjwss = TimedJSONWebSignatureSerializer(
+            secret_key=current_app.config["SECRET_KEY"],
+            expires_in=config.get("genesis", "token_valid_for", 3600),
+            algorithm_name="HS256")
     return tjwss.dumps(payload).decode("utf-8")
 
 def verify(token=None):
+    """
+    Verify a provided JSON Web Token (JWT) for authentication.
+
+    :param str token: JSON Web Token (JWT)
+    :returns: True if valid, False if not
+    """
     if config.get("genesis", "anonymous"):
         return
 
@@ -74,8 +104,9 @@ def verify(token=None):
         token = token[1]
 
     try:
-        tjwss = TimedJSONWebSignatureSerializer(secret_key=current_app.config["SECRET_KEY"],
-            expires_in=3600, algorithm_name="HS256")
+        tjwss = TimedJSONWebSignatureSerializer(
+                secret_key=current_app.config["SECRET_KEY"],
+                expires_in=3600, algorithm_name="HS256")
         payload = tjwss.loads(token)
     except SignatureExpired:
         resp = jsonify(message="Token expired")
@@ -91,7 +122,9 @@ def verify(token=None):
         resp.status_code = 401
         return resp
 
+
 def required():
+    """Decorator function. Wraps API endpoints to require authentication."""
     def wrapper(func):
         @wraps(func)
         def decorator(*args, **kwargs):
@@ -102,12 +135,16 @@ def required():
         return decorator
     return wrapper
 
+
 @backend.route("/api/ping")
 def ping():
+    """Simple endpoint to check API up status."""
     return jsonify(ping="pong")
+
 
 @backend.route("/api/token", methods=["POST"])
 def get_token():
+    """Get a new API token."""
     data = request.get_json()
     user, pwd = data.get("username", ""), data.get("password", "")
     if config.get("genesis", "anonymous"):
@@ -125,19 +162,23 @@ def get_token():
         resp.status_code = 401
         return resp
 
+
 @backend.route("/api/token/refresh", methods=["POST"])
 def get_refresh_token():
+    """Refresh an existing API token."""
     token = request.get_json().get("token", None)
     if not token:
         resp = jsonify(message="Authorization required")
         resp.status_code = 401
         return resp
     v = verify(token)
-    if v: return v
+    if v:
+        return v
     if config.get("genesis", "anonymous"):
         user = AnonymousUser()
     else:
-        tjwss = TimedJSONWebSignatureSerializer(secret_key=current_app.config["SECRET_KEY"],
+        tjwss = TimedJSONWebSignatureSerializer(
+            secret_key=current_app.config["SECRET_KEY"],
             expires_in=3600, algorithm_name="HS256")
         payload = tjwss.loads(token)
         user = users.get(name=payload["uid"])

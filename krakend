@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 
 import sys
 import getopt
@@ -18,7 +18,7 @@ class KrakenDaemon(Daemon):
 
 
 def usage():
-    print """
+    print("""
 Usage: kraken [options]
 Options:
     -c, --config <file>  - Use given config file instead of default
@@ -28,7 +28,7 @@ Options:
     -r, --restart        - Restart daemon
     -s, --stop           - Stop daemon
     -h, --help           - This help
-    """
+    """)
 
 
 if __name__ == '__main__':
@@ -41,14 +41,13 @@ if __name__ == '__main__':
 
     try:
         opts, args = getopt.getopt(sys.argv[1:], 'hce:drsv', ['help', 'config=', 'env=', 'start', 'stop', 'restart'])
-    except getopt.GetoptError, e:
-        print str(e)
+    except getopt.GetoptError as e:
+        print((str(e)))
         usage()
         sys.exit(2)
 
     action = 'run'
     environment = 'prod'
-    os.environ['XTABLES_LIBDIR'] = '/usr/lib/iptables'
 
     for o, a in opts:
         if o in ('-h', '--help'):

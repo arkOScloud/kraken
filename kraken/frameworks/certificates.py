@@ -1,3 +1,12 @@
+"""
+Endpoints for management of arkOS certificates.
+
+arkOS Kraken
+(c) 2016 CitizenWeb
+Written by Jacob Cook
+Licensed under GPLv3, see LICENSE.md
+"""
+
 from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
@@ -46,8 +55,8 @@ class CertificatesAPI(MethodView):
                 data["keytype"], data["keylength"], message)
             message.complete("success", "Certificate generated successfully")
             push_record("certs", cert.serialized)
-        except Exception, e:
-            message.complete("error", "Certificate could not be generated: %s" % str(e))
+        except Exception as e:
+            message.complete("error", "Certificate could not be generated: {0}".format(str(e)))
             raise
 
     def _upload(self, job, name, files):
@@ -57,8 +66,8 @@ class CertificatesAPI(MethodView):
             cert = certificates.upload_certificate(name, files[0], files[1], files[2], message)
             message.complete("success", "Certificate uploaded successfully")
             push_record("certs", cert.serialized)
-        except Exception, e:
-            message.complete("error", "Certificate could not be uploaded: %s" % str(e))
+        except Exception as e:
+            message.complete("error", "Certificate could not be uploaded: {0}".format(str(e)))
             raise
 
     @auth.required()
@@ -103,7 +112,7 @@ class CertificateAuthoritiesAPI(MethodView):
                 data = f.read()
             resp = Response(data, mimetype="application/octet-stream")
             resp.headers["Content-Length"] = str(len(data.encode('utf-8')))
-            resp.headers["Content-Disposition"] = "attachment; filename=%s.pem" % id
+            resp.headers["Content-Disposition"] = "attachment; filename={0}.pem".format(id)
             return resp
         if type(certs) == list:
             return jsonify(certauths=[x.serialized for x in certs])

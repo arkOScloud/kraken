@@ -1,3 +1,12 @@
+"""
+Endpoints for management of filesystems.
+
+arkOS Kraken
+(c) 2016 CitizenWeb
+Written by Jacob Cook
+Licensed under GPLv3, see LICENSE.md
+"""
+
 from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
@@ -32,16 +41,16 @@ class DisksAPI(MethodView):
         disk = filesystems.VirtualDisk(id=data["id"], size=data["size"])
         try:
             disk.create()
-        except Exception, e:
-            message.complete("error", "Virtual disk could not be created: %s" % str(e))
+        except Exception as e:
+            message.complete("error", "Virtual disk could not be created: {0}".format(str(e)))
             raise
         if data["crypt"]:
             try:
                 message.update("info", "Encrypting virtual disk...")
                 disk.encrypt(data["passwd"])
-            except Exception, e:
+            except Exception as e:
                 disk.remove()
-                message.complete("error", "Virtual disk could not be encrypted: %s" % str(e))
+                message.complete("error", "Virtual disk could not be encrypted: {0}".format(str(e)))
                 raise
         message.complete("success", "Virtual disk created successfully")
         push_record("filesystem", disk.serialized)
@@ -71,11 +80,11 @@ class DisksAPI(MethodView):
             elif data["operation"] == "disable":
                 op = "disabled"
                 disk.disable()
-        except Exception, e:
-            resp = jsonify(message="Operation failed: %s" % str(e))
+        except Exception as e:
+            resp = jsonify(message="Operation failed: {0}".format(str(e)))
             resp.status_code = 422
             return resp
-        return jsonify(filesystem=disk.serialized, message="Disk %s successfully"%op)
+        return jsonify(filesystem=disk.serialized, message="Disk {0} successfully".format(op))
 
     @auth.required()
     def delete(self, id):

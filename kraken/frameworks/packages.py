@@ -1,11 +1,20 @@
+"""
+Endpoints for management of system packages.
+
+arkOS Kraken
+(c) 2016 CitizenWeb
+Written by Jacob Cook
+Licensed under GPLv3, see LICENSE.md
+"""
+
 import pacman
 
-from flask import Response, Blueprint, jsonify, request, abort
+from flask import Blueprint, jsonify, request, abort
 from flask.views import MethodView
 
 from kraken import auth
 from kraken.jobs import as_job, job_response
-from kraken.messages import Message, push_record, remove_record
+from kraken.messages import Message, push_record
 
 backend = Blueprint("packages", __name__)
 
@@ -42,7 +51,7 @@ class PackagesAPI(MethodView):
             try:
                 pacman.refresh()
                 prereqs = pacman.needs_for(install)
-                message.update("info", ", ".join(prereqs), head="Installing %s package(s): " % len(prereqs))
+                message.update("info", ", ".join(prereqs), head="Installing {0} package(s): ".format(len(prereqs)))
                 pacman.install(install)
                 for x in prereqs:
                     try:
@@ -52,13 +61,13 @@ class PackagesAPI(MethodView):
                         push_record("package", info)
                     except:
                         pass
-            except Exception, e:
+            except Exception as e:
                 message.complete("error", str(e))
                 return
         if remove:
             try:
                 prereqs = pacman.depends_for(remove)
-                message.update("info", ", ".join(prereqs), head="Removing %s package(s): %s" % len(prereqs))
+                message.update("info", ", ".join(prereqs), head="Removing {0} package(s): ".format(len(prereqs)))
                 pacman.remove(remove)
                 for x in prereqs:
                     try:
@@ -68,7 +77,7 @@ class PackagesAPI(MethodView):
                         push_record("package", info)
                     except:
                         pass
-            except Exception, e:
+            except Exception as e:
                 message.complete("error", str(e))
                 return
         message.complete("success", "Operations completed successfully")

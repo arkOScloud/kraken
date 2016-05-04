@@ -1,10 +1,19 @@
+"""
+Endpoints for management of arkOS backups.
+
+arkOS Kraken
+(c) 2016 CitizenWeb
+Written by Jacob Cook
+Licensed under GPLv3, see LICENSE.md
+"""
+
 import os
 
-from flask import Blueprint, request, Response, current_app, jsonify
+from flask import Blueprint, request, jsonify
 
 from kraken import auth, genesis
 from kraken.jobs import as_job
-from kraken.messages import Message, push_record
+from kraken.messages import Message
 
 from arkos import config, applications, security
 from arkos.utilities import shell, random_string
@@ -46,8 +55,8 @@ def firstrun():
         if not os.path.exists('/etc/cron.d'):
             os.mkdir('/etc/cron.d')
         with open('/etc/cron.d/resize', 'w') as f:
-            f.write('@reboot root e2fsck -fy /dev/mmcblk0p%s\n'%part)
-            f.write('@reboot root resize2fs /dev/mmcblk0p%s\n'%part)
+            f.write('@reboot root e2fsck -fy /dev/mmcblk0p{0}\n'.format(part))
+            f.write('@reboot root resize2fs /dev/mmcblk0p{0}\n'.format(part))
             f.write('@reboot root rm /etc/cron.d/resize\n')
             f.close()
     if data.get("use_gpu_mem", None) \
@@ -74,13 +83,13 @@ def firstrun():
     and config.get("enviro", "board").startswith("Cubie"):
         if config.get("enviro", "board") == "Cubieboard2":
             with open('/boot/uEnv.txt', 'w') as f:
-                f.write('extraargs=mac_addr=%s\n' % data.get("cubie_mac"))
+                f.write('extraargs=mac_addr={0}\n'.format(data.get("cubie_mac")))
         elif config.get("enviro", "board") == "Cubietruck":
             with open('/etc/modprobe.d/gmac.conf', 'w') as f:
-                f.write('options sunxi_gmac mac_str="%s"\n' % data.get("cubie_mac"))
+                f.write('options sunxi_gmac mac_str="{0}"\n'.format(data.get("cubie_mac")))
     if data.get("install"):
         as_job(install, data["install"])
     security.initialize_firewall()
     rootpwd = random_string()[:16]
-    shell("passwd root", stdin="%s\n%s\n" % (rootpwd,rootpwd))
+    shell("passwd root", stdin="{0}\n{0}\n".format(rootpwd))
     return jsonify(rootpwd=rootpwd)

@@ -1,3 +1,12 @@
+"""
+Endpoints for management of arkOS users, groups and domains.
+
+arkOS Kraken
+(c) 2016 CitizenWeb
+Written by Jacob Cook
+Licensed under GPLv3, see LICENSE.md
+"""
+
 from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
@@ -26,11 +35,11 @@ class UsersAPI(MethodView):
                 last_name=data["last_name"], domain=data["domain"],
                 admin=data["admin"], sudo=data["sudo"])
             u.add(data["passwd"])
-        except Exception, e:
-            resp = jsonify(message="User couldn't be added: %s" % str(e))
+        except Exception as e:
+            resp = jsonify(message="User couldn't be added: {0}".format(str(e)))
             resp.status_code = 422
             return resp
-        return jsonify(user=u.serialized, message="User %s added successfully" % str(u.name))
+        return jsonify(user=u.serialized, message="User {0} added successfully".format(u.name))
 
     @auth.required()
     def put(self, id):
@@ -46,11 +55,11 @@ class UsersAPI(MethodView):
         u.mail = [str(x) for x in data["mail_addresses"]]
         try:
             u.update(data.get("passwd"))
-        except Exception, e:
-            resp = jsonify(message="User couldn't be updated: %s" % str(e))
+        except Exception as e:
+            resp = jsonify(message="User couldn't be updated: {0}".format(str(e)))
             resp.status_code = 422
             return resp
-        return jsonify(user=u.serialized, message="User %s updated successfully" % u.name)
+        return jsonify(user=u.serialized, message="User {0} updated successfully".format(u.name))
 
     @auth.required()
     def delete(self, id):
@@ -59,8 +68,8 @@ class UsersAPI(MethodView):
             abort(404)
         try:
             u.delete()
-        except Exception, e:
-            resp = jsonify(message="User couldn't be deleted: %s" % str(e))
+        except Exception as e:
+            resp = jsonify(message="User couldn't be deleted: {0}".format(str(e)))
             resp.status_code = 422
             return resp
         return Response(status=204)
@@ -83,11 +92,11 @@ class GroupsAPI(MethodView):
         g = groups.Group(name=data["name"], users=data["users"])
         try:
             g.add()
-        except Exception, e:
-            resp = jsonify(message="Group couldn't be added: %s" % str(e))
+        except Exception as e:
+            resp = jsonify(message="Group couldn't be added: {0}".format(str(e)))
             resp.status_code = 422
             return resp
-        return jsonify(group=g.serialized, message="Group %s added successfully" % str(g.name))
+        return jsonify(group=g.serialized, message="Group {0} added successfully".format(g.name))
 
     @auth.required()
     def put(self, id):
@@ -98,11 +107,11 @@ class GroupsAPI(MethodView):
         g.users = [str(u) for u in data["users"]]
         try:
             g.update()
-        except Exception, e:
-            resp = jsonify(message="Group couldn't be updated: %s" % str(e))
+        except Exception as e:
+            resp = jsonify(message="Group couldn't be updated: {0}".format(str(e)))
             resp.status_code = 422
             return resp
-        return jsonify(group=g.serialized, message="Group %s updated successfully" % g.name)
+        return jsonify(group=g.serialized, message="Group {0} updated successfully".format(g.name))
 
     @auth.required()
     def delete(self, id):
@@ -111,8 +120,8 @@ class GroupsAPI(MethodView):
             abort(404)
         try:
             g.delete()
-        except Exception, e:
-            resp = jsonify(message="Group couldn't be deleted: %s" % str(e))
+        except Exception as e:
+            resp = jsonify(message="Group couldn't be deleted: {0}".format(str(e)))
             resp.status_code = 422
             return resp
         return Response(status=204)
@@ -135,11 +144,11 @@ class DomainsAPI(MethodView):
         d = domains.Domain(name=data["id"])
         try:
             d.add()
-        except Exception, e:
-            resp = jsonify(message="Domain couldn't be added: %s" % str(e))
+        except Exception as e:
+            resp = jsonify(message="Domain couldn't be added: {0}".format(str(e)))
             resp.status_code = 422
             return resp
-        return jsonify(domain=d.serialized, message="Domain %s added successfully" % str(d.name))
+        return jsonify(domain=d.serialized, message="Domain {0} added successfully".format(d.name))
 
     @auth.required()
     def delete(self, id):
@@ -148,8 +157,8 @@ class DomainsAPI(MethodView):
             abort(404)
         try:
             d.remove()
-        except Exception, e:
-            resp = jsonify(message="Domain couldn't be deleted: %s" % str(e))
+        except Exception as e:
+            resp = jsonify(message="Domain couldn't be deleted: {0}".format(str(e)))
             resp.status_code = 422
             return resp
         return Response(status=204)

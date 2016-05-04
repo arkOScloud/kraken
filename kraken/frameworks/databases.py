@@ -1,9 +1,17 @@
-from flask import make_response, Response, Blueprint, abort, jsonify, request
+"""
+Endpoints for management of arkOS databases.
+
+arkOS Kraken
+(c) 2016 CitizenWeb
+Written by Jacob Cook
+Licensed under GPLv3, see LICENSE.md
+"""
+
+from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
 from kraken import auth
 from arkos import databases
-from kraken.messages import push_record
 
 backend = Blueprint("databases", __name__)
 
@@ -20,7 +28,7 @@ class DatabasesAPI(MethodView):
             data = dbs.dump()
             resp = Response(data, mimetype="application/octet-stream")
             resp.headers["Content-Length"] = str(len(data.encode('utf-8')))
-            resp.headers["Content-Disposition"] = "attachment; filename=%s.sql" % id
+            resp.headers["Content-Disposition"] = "attachment; filename={0}.sql".format(id)
             return resp
         if type(dbs) == list:
             return jsonify(databases=[x.serialized for x in dbs])
@@ -33,11 +41,11 @@ class DatabasesAPI(MethodView):
         manager = databases.get_managers(data["type_id"])
         try:
             db = manager.add_db(data["id"])
-        except Exception, e:
-            resp = jsonify(message="Database couldn't be added: %s" % str(e))
+        except Exception as e:
+            resp = jsonify(message="Database couldn't be added: {0}".format(str(e)))
             resp.status_code = 422
             return resp
-        return jsonify(database=db.serialized, message="Database %s added successfully" % str(db.id))
+        return jsonify(database=db.serialized, message="Database {0} added successfully".format(str(db.id)))
 
     @auth.required()
     def put(self, id):
@@ -49,7 +57,7 @@ class DatabasesAPI(MethodView):
             abort(400)
         try:
             result = db.execute(data["execute"])
-        except Exception, e:
+        except Exception as e:
             result = str(e)
         return jsonify(database={"id": db.id, "result": result})
 
@@ -60,8 +68,8 @@ class DatabasesAPI(MethodView):
             abort(404)
         try:
             db.remove()
-        except Exception, e:
-            resp = jsonify(message="Database couldn't be deleted: %s" % str(e))
+        except Exception as e:
+            resp = jsonify(message="Database couldn't be deleted: {0}".format(str(e)))
             resp.status_code = 422
             return resp
         return Response(status=204)
@@ -86,11 +94,11 @@ class DatabaseUsersAPI(MethodView):
         manager = databases.get_managers(data["type"])
         try:
             u = manager.add_user(data["id"], data["passwd"])
-        except Exception, e:
-            resp = jsonify(message="Database user couldn't be added: %s" % str(e))
+        except Exception as e:
+            resp = jsonify(message="Database user couldn't be added: {0}".format(str(e)))
             resp.status_code = 422
             return resp
-        return jsonify(database_user=u.serialized, message="Database user %s added successfully" % str(u.id))
+        return jsonify(database_user=u.serialized, message="Database user {0} added successfully".format(u.id))
 
     @auth.required()
     def put(self, id):
@@ -110,8 +118,8 @@ class DatabaseUsersAPI(MethodView):
             abort(404)
         try:
             u.remove()
-        except Exception, e:
-            resp = jsonify(message="Database user couldn't be deleted: %s" % str(e))
+        except Exception as e:
+            resp = jsonify(message="Database user couldn't be deleted: {0}".format(str(e)))
             resp.status_code = 422
             return resp
         return Response(status=204)

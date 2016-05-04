@@ -1,3 +1,12 @@
+"""
+Endpoints for management of files and folders.
+
+arkOS Kraken
+(c) 2016 CitizenWeb
+Written by Jacob Cook
+Licensed under GPLv3, see LICENSE.md
+"""
+
 import grp
 import mimetypes
 import os
@@ -207,14 +216,14 @@ def download(id):
             data = f.read()
         resp = Response(data, mimetype="application/octet-stream")
         resp.headers["Content-Length"] = os.path.getsize(apath)
-        resp.headers["Content-Disposition"] = "attachment; filename=%s" % os.path.basename(apath)
+        resp.headers["Content-Disposition"] = "attachment; filename={0}".format(os.path.basename(apath))
         return resp
     else:
         with open(path, "r") as f:
             data = f.read()
         resp = Response(data, mimetype="application/octet-stream")
         resp.headers["Content-Length"] = str(len(data))
-        resp.headers["Content-Disposition"] = "attachment; filename=%s" % os.path.basename(path)
+        resp.headers["Content-Disposition"] = "attachment; filename={0}".format(os.path.basename(path))
         return resp
 
 
@@ -267,7 +276,7 @@ def as_dict(path, content=False):
     except:
         data["group"] = str(fstat[stat.ST_GID])
     if data["type"] == "file":
-        tc = "".join(map(chr, [7,8,9,10,12,13,27] + range(0x20, 0x100)))
+        tc = "".join(map(chr, [7,8,9,10,12,13,27] + list(range(0x20, 0x100))))
         ibs = lambda b: bool(b.translate(None, tc))
         with open(path, 'r') as f:
             try:

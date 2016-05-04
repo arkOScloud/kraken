@@ -1,6 +1,15 @@
+"""
+Endpoints for management of arkOS Applications.
+
+arkOS Kraken
+(c) 2016 CitizenWeb
+Written by Jacob Cook
+Licensed under GPLv3, see LICENSE.md
+"""
+
 import os
 
-from flask import Response, Blueprint, abort, jsonify, request, send_from_directory
+from flask import Blueprint, abort, jsonify, request, send_from_directory
 from flask.views import MethodView
 
 from kraken import auth
@@ -33,7 +42,7 @@ class ApplicationsAPI(MethodView):
         if not app:
             abort(404)
         if operation == "install":
-            if app.installed and not (hasattr(app, "upgradable") and app.upgradable):
+            if app.installed and not getattr(app, "upgradable", None):
                 return jsonify(app=app.serialized)
             id = as_job(self._install, app)
         elif operation == "uninstall":
@@ -54,23 +63,23 @@ class ApplicationsAPI(MethodView):
         message = Message(job=job)
         try:
             app.install(message=message, force=True)
-            smsg = "%s installed successfully." % app.name
+            smsg = "{0} installed successfully.".format(app.name)
             if app.type == "website":
-                smsg += " Go to 'My Applications > %s > Add Website' to set up a site using this app." % app.name
+                smsg += " Go to 'My Applications > {0} > Add Website' to set up a site using this app.".format(app.name)
             message.complete("success", smsg)
             push_record("app", app.serialized)
-        except Exception, e:
-            message.complete("error", "%s could not be installed: %s" % (app.name, str(e)))
+        except Exception as e:
+            message.complete("error", "{0} could not be installed: {1}".format(app.name, str(e)))
             raise
 
     def _uninstall(self, job, app):
         message = Message(job=job)
         try:
             app.uninstall(message=message)
-            message.complete("success", "%s uninstalled successfully" % app.name)
+            message.complete("success", "{0} uninstalled successfully".format(app.name))
             push_record("app", app.serialized)
-        except Exception, e:
-            message.complete("error", "%s could not be uninstalled: %s" % (app.name, str(e)))
+        except Exception as e:
+            message.complete("error", "{0} could not be uninstalled: {1}".format(app.name, str(e)))
             raise
 
 
