@@ -23,7 +23,6 @@ from werkzeug import secure_filename
 from flask import Response, Blueprint, jsonify, request, abort
 from flask.views import MethodView
 from kraken.messages import remove_record
-from kraken.jobs import as_job, job_response
 
 backend = Blueprint("filemgr", __name__)
 
@@ -170,7 +169,7 @@ class SharingAPI(MethodView):
     def post(self):
         data = request.get_json()["share"]
         id = random_string()
-        share = shared_files.Share(id, data["path"], data.get("expires", 0))
+        share = shared_files.SharedFile(id, data["path"], data.get("expires", 0))
         share.add()
         return jsonify(share=share.serialized)
 
