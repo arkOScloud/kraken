@@ -1,14 +1,4 @@
+cryptography
 flask
-GitPython
 itsdangerous
-netifaces
-ntplib
-psutil
-pycryptsetup
-pyOpenSSL
-pyparted
-python-gnupg
-python-ldap
-python-nginx
-python-pacman
 redis
