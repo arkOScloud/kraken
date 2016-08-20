@@ -12,10 +12,10 @@ import traceback
 
 from flask import jsonify, Response
 
+from arkos.utilities import random_string
 from arkos.utilities.errors import RequestError
 
 from kraken.application import app
-from kraken.utilities import random_string
 from kraken.redis_storage import storage
 
 

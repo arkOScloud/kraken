@@ -58,7 +58,7 @@ def run_daemon(environment, log_level, config_file, secrets_file,
     app.logger.info('Environment: {0}'.format(environment))
 
     for code in list(default_exceptions.keys()):
-        app.error_handler_spec[None][code] = make_json_error
+        app.register_error_handler(code, make_json_error)
 
     app.register_blueprint(auth.backend)
     app.register_blueprint(messages.backend)

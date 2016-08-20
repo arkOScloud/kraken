@@ -24,11 +24,11 @@ from werkzeug.exceptions import HTTPException
 
 def genAPIKey():
     """Generate an API key."""
-    rchoice = random.choice(['rA', 'aZ', 'gQ', 'hH', 'hG', 'aR', 'DD'])
+    rep = random.choice(['rA', 'aZ', 'gQ', 'hH', 'hG', 'aR', 'DD']).encode()
     digest = hashes.Hash(hashes.SHA256(), backend=default_backend())
-    digest.update(str(random.getrandbits(256)))
-    return base64.b64encode(digest.finalize(), rchoice).rstrip('==')
-
+    digest.update(str(random.getrandbits(256)).encode())
+    final = digest.finalize()
+    return base64.b64encode(final, rep).decode('utf-8').rstrip('==')
 
 def make_json_error(err):
     """Prepare a standardized error report."""
