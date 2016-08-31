@@ -29,9 +29,10 @@ class Message:
         """
         self.id = random_string()[0:10]
         self.job = job
+        self.head = head
         if cls and msg:
             data = {"id": self.id, "class": cls, "message": msg,
-                    "headline": head, "complete": True}
+                    "headline": head or self.head, "complete": True}
         else:
             data = {"id": self.id, "class": "info", "headline": None,
                     "message": "Please wait...", "complete": False}
@@ -47,8 +48,8 @@ class Message:
         :param str msg: Message text
         :param str head: Message header text
         """
-        data = {"id": self.id, "class": cls, "message": msg, "headline": head,
-                "complete": False}
+        data = {"id": self.id, "class": cls, "message": msg,
+                "headline": head or self.head, "complete": False}
         storage.append("genesis:messages", data)
         if self.job:
             self.job.update_message(cls, msg, head)
@@ -61,8 +62,8 @@ class Message:
         :param str msg: Message text
         :param str head: Message header text
         """
-        data = {"id": self.id, "class": cls, "message": msg, "headline": head,
-                "complete": True}
+        data = {"id": self.id, "class": cls, "message": msg,
+                "headline": head or self.head, "complete": True}
         storage.append("genesis:messages", data)
         if self.job:
             self.job.update_message(cls, msg, head)

@@ -38,18 +38,16 @@ class WebsitesAPI(MethodView):
         return job_response(id)
 
     def _post(self, job, data):
-        message = Message(job=job)
+        message = Message(job=job, head="Installing website...")
         sapp = applications.get(data["site_type"])
         site = sapp._website
         site = site(data["id"], data["addr"], data["port"])
         try:
             specialmsg = site.install(sapp, data["extra_data"], True, message)
-            message.complete("success", "{0} site installed successfully".format(site.meta.name), head="Installing website")
             if specialmsg:
                 Message("info", specialmsg)
             push_record("website", site.serialized)
         except Exception as e:
-            message.complete("error", "{0} could not be installed: {1}".format(data["id"], str(e)), head="Installing website")
             remove_record("website", data["id"])
             raise
 
@@ -84,19 +82,15 @@ class WebsitesAPI(MethodView):
         return job_response(id)
 
     def _delete(self, job, id):
-        message = Message(job=job)
+        message = Message(job=job, head="Installing website...")
         site = websites.get(id)
-        try:
-            site.remove(message)
-            message.complete("success", "{0} site removed successfully".format(site.meta.name), head="Removing website")
-            remove_record("website", id)
-            remove_record("policy", id)
-        except Exception as e:
-            message.complete("error", "{0} could not be removed: {1}".format(id, str(e)), head="Removing website")
-            raise
+        site.remove(message)
+        remove_record("website", id)
+        remove_record("policy", id)
 
 
-@backend.route('/api/websites/actions/<string:id>/<string:action>', methods=["POST",])
+@backend.route('/api/websites/actions/<string:id>/<string:action>',
+               methods=["POST", ])
 @auth.required()
 def perform_action(id, action):
     w = websites.get(id)
@@ -117,7 +111,7 @@ def perform_action(id, action):
 
 sites_view = WebsitesAPI.as_view('sites_api')
 backend.add_url_rule('/api/websites', defaults={'id': None},
-    view_func=sites_view, methods=['GET',])
-backend.add_url_rule('/api/websites', view_func=sites_view, methods=['POST',])
+                     view_func=sites_view, methods=['GET', ])
+backend.add_url_rule('/api/websites', view_func=sites_view, methods=['POST', ])
 backend.add_url_rule('/api/websites/<string:id>', view_func=sites_view,
-    methods=['GET', 'PUT', 'DELETE'])
+                     methods=['GET', 'PUT', 'DELETE'])
