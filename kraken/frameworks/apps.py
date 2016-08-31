@@ -25,9 +25,11 @@ class ApplicationsAPI(MethodView):
     def get(self, id):
         if request.args.get("rescan", None):
             applications.scan()
-        apps = applications.get(id, type=request.args.get("type", None),
+        apps = applications.get(
+            id, type=request.args.get("type", None),
             loadable=request.args.get("loadable", None),
-            installed=request.args.get("installed", None))
+            installed=request.args.get("installed", None),
+            cry=False)
         if id and not apps:
             abort(404)
         if type(apps) == list:
@@ -61,26 +63,13 @@ class ApplicationsAPI(MethodView):
 
     def _install(self, job, app):
         message = Message(job=job)
-        try:
-            app.install(message=message, force=True)
-            smsg = "{0} installed successfully.".format(app.name)
-            if app.type == "website":
-                smsg += " Go to 'My Applications > {0} > Add Website' to set up a site using this app.".format(app.name)
-            message.complete("success", smsg)
-            push_record("app", app.serialized)
-        except Exception as e:
-            message.complete("error", "{0} could not be installed: {1}".format(app.name, str(e)))
-            raise
+        app.install(message=message, force=True, cry=False)
+        push_record("app", app.serialized)
 
     def _uninstall(self, job, app):
         message = Message(job=job)
-        try:
-            app.uninstall(message=message)
-            message.complete("success", "{0} uninstalled successfully".format(app.name))
-            push_record("app", app.serialized)
-        except Exception as e:
-            message.complete("error", "{0} could not be uninstalled: {1}".format(app.name, str(e)))
-            raise
+        app.uninstall(message=message)
+        push_record("app", app.serialized)
 
 
 @auth.required()
@@ -93,17 +82,19 @@ def dispatcher(id, path):
     return fn(*params[1:])
 
 
-apps_view = ApplicationsAPI.as_view('apps_api')
-backend.add_url_rule('/api/apps', defaults={'id': None},
-    view_func=apps_view, methods=['GET',])
-backend.add_url_rule('/api/apps/<string:id>', view_func=apps_view,
-    methods=['GET', 'PUT'])
-backend.add_url_rule('/api/apps/<string:id>/<path:path>', view_func=dispatcher,
-    methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE'])
-
 @backend.route('/api/apps/logo/<string:id>')
 def get_app_logo(id):
     app = applications.get(id)
     if not app:
         abort(404)
-    return send_from_directory(os.path.join('/var/lib/arkos/applications', id, 'assets'), "logo.png")
+    return send_from_directory(
+        os.path.join('/var/lib/arkos/applications', id, 'assets'), "logo.png")
+
+
+apps_view = ApplicationsAPI.as_view('apps_api')
+backend.add_url_rule('/api/apps', defaults={'id': None},
+                     view_func=apps_view, methods=['GET', ])
+backend.add_url_rule('/api/apps/<string:id>', view_func=apps_view,
+                     methods=['GET', 'PUT'])
+backend.add_url_rule('/api/apps/<string:id>/<path:path>', view_func=dispatcher,
+                     methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE'])
