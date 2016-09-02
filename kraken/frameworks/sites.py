@@ -11,8 +11,8 @@ from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
 from kraken import auth
-from arkos import applications, websites, certificates
-from kraken.messages import Message, push_record, remove_record
+from arkos import applications, certificates, notify, websites
+from kraken.messages import JobMessageContext, push_record, remove_record
 from kraken.jobs import as_job, job_response
 
 backend = Blueprint("websites", __name__)
@@ -38,14 +38,14 @@ class WebsitesAPI(MethodView):
         return job_response(id)
 
     def _post(self, job, data):
-        message = Message(job=job, head="Installing website...")
+        message = JobMessageContext("Websites", job=job)
         sapp = applications.get(data["site_type"])
         site = sapp._website
         site = site(data["id"], data["addr"], data["port"])
         try:
             specialmsg = site.install(sapp, data["extra_data"], True, message)
             if specialmsg:
-                Message("info", specialmsg)
+                notify.info("Websites", specialmsg)
             push_record("website", site.serialized)
         except Exception as e:
             remove_record("website", data["id"])
@@ -82,7 +82,7 @@ class WebsitesAPI(MethodView):
         return job_response(id)
 
     def _delete(self, job, id):
-        message = Message(job=job, head="Installing website...")
+        message = JobMessageContext("Websites", job=job)
         site = websites.get(id)
         site.remove(message)
         remove_record("website", id)

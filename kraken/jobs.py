@@ -8,14 +8,11 @@ Licensed under GPLv3, see LICENSE.md
 """
 
 import threading
-import traceback
 
 from flask import jsonify, Response
 
 from arkos.utilities import random_string
-from arkos.utilities.errors import RequestError
 
-from kraken.application import app
 from kraken.redis_storage import storage
 
 
@@ -41,6 +38,7 @@ class Job(threading.Thread):
         :param args: Additional arguments to pass to executable function
         :param kwargs: Keyword arguments to pass to executable function
         """
+        threading.Thread.__init__(self)
         self._id = id
         self._func = func
         self._args = args
@@ -51,7 +49,6 @@ class Job(threading.Thread):
             del kwargs["success_code"]
         else:
             self._success_code = 201
-        threading.Thread.__init__(self)
 
     def run(self):
         """Execute the job's function."""
@@ -60,19 +57,12 @@ class Job(threading.Thread):
                      "class": None, "headline": None})
         try:
             self._func(self, *self._args, **self._kwargs)
-        except RequestError as e:
-            self.status_code = 400
-            storage.set("job:{0}".format(self._id),
-                        {"status": self.status_code})
         except Exception as e:
             self.status_code = 500
-            logstr = "Job {0} ({1}) has run into exception {2}: {3}"
-            app.logger.error(logstr.format(self._id, self._func.__name__,
-                             e.__class__.__name__, str(e)))
-            logstr = "Stacktrace is as follows:\n{0}"
-            app.logger.error(logstr.format(traceback.format_exc()))
-            storage.set("job:{0}".format(self._id),
-                        {"status": self.status_code})
+            storage.set(
+                "job:{0}".format(self._id),
+                {"status": self.status_code, "message": str(e),
+                 "class": "error"})
         else:
             storage.set("job:{0}".format(self._id),
                         {"status": self._success_code})

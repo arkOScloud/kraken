@@ -14,7 +14,7 @@ from flask.views import MethodView
 
 from kraken import auth
 from kraken.jobs import as_job, job_response
-from kraken.messages import Message, push_record
+from kraken.messages import JobMessageContext, push_record
 
 backend = Blueprint("packages", __name__)
 
@@ -46,41 +46,45 @@ class PackagesAPI(MethodView):
         return job_response(id)
 
     def _operation(self, job, install, remove):
-        message = Message(job=job)
         if install:
             try:
                 pacman.refresh()
                 prereqs = pacman.needs_for(install)
-                message.update("info", ", ".join(prereqs), head="Installing {0} package(s): ".format(len(prereqs)))
+                title = "Installing {0} package(s): ".format(len(prereqs))
+                message = JobMessageContext("Packages", title=title, job=job)
+                message.info("Packages", ", ".join(prereqs))
                 pacman.install(install)
                 for x in prereqs:
                     try:
                         info = process_info(pacman.get_info(x))
-                        if not "installed" in info:
+                        if "installed" not in info:
                             info["installed"] = True
                         push_record("package", info)
                     except:
                         pass
             except Exception as e:
-                message.complete("error", str(e))
+                message.error("Packages", str(e), complete=True)
                 return
         if remove:
             try:
                 prereqs = pacman.depends_for(remove)
-                message.update("info", ", ".join(prereqs), head="Removing {0} package(s): ".format(len(prereqs)))
+                title = "Removing {0} package(s): ".format(len(prereqs))
+                message = JobMessageContext("Packages", title=title, job=job)
+                message.info("Packages", ", ".join(prereqs))
                 pacman.remove(remove)
                 for x in prereqs:
                     try:
                         info = process_info(pacman.get_info(x))
-                        if not "installed" in info:
+                        if "installed" not in info:
                             info["installed"] = False
                         push_record("package", info)
                     except:
                         pass
             except Exception as e:
-                message.complete("error", str(e))
+                message.error("Packages", str(e), complete=True)
                 return
-        message.complete("success", "Operations completed successfully")
+        msg = "Operations completed successfully"
+        message.success("Packages", msg, complete=True)
 
 
 def process_info(info):
@@ -90,14 +94,15 @@ def process_info(info):
             data["id"] = info["Name"]
             continue
         data[x.lower().replace(" ", "_")] = info[x]
-    if not "upgradable" in data:
+    if "upgradable" not in data:
         data["upgradable"] = False
     return data
 
 
 packages_view = PackagesAPI.as_view('sites_api')
 backend.add_url_rule('/api/system/packages', defaults={'id': None},
-    view_func=packages_view, methods=['GET',])
-backend.add_url_rule('/api/system/packages', view_func=packages_view, methods=['POST',])
-backend.add_url_rule('/api/system/packages/<string:id>', view_func=packages_view,
-    methods=['GET',])
+                     view_func=packages_view, methods=['GET', ])
+backend.add_url_rule('/api/system/packages', view_func=packages_view,
+                     methods=['POST', ])
+backend.add_url_rule('/api/system/packages/<string:id>',
+                     view_func=packages_view, methods=['GET', ])

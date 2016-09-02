@@ -64,10 +64,11 @@ class Storage:
 
         :param str key: Key name
         """
+        data = {}
         values = self.redis.hgetall("arkos:{0}".format(key))
-        for x in values:
-            values[x] = self._get(values[x])
-        return values
+        for x in list(values):
+            data[x.decode()] = self._get(values[x])
+        return data
 
     def set(self, key, value, optval=None, pipe=None):
         """
@@ -275,18 +276,24 @@ class Storage:
         r.expire("arkos:{0}".format(key), time)
 
     def _get(self, value):
-        if type(value) == str:
+        if type(value) == bytes:
             return self._translate(value)
+        elif type(value) == str:
+            return self._translate(value.encode("utf-8"))
         elif type(value) == list:
             vals = []
             for x in value:
                 vals.append(self._translate(x))
             return vals
+        elif value == "None":
+            return None
         return value
 
     def _translate(self, value):
-        if value.startswith(("[", "{")) and value.endswith(("]", "}")):
+        if value.startswith((b"[", b"{")) and value.endswith((b"]", b"}")):
             return json.loads(value)
+        if type(value) == bytes:
+            value = value.decode()
         return value
 
 

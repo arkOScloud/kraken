@@ -14,7 +14,7 @@ from flask.views import MethodView
 
 from kraken import auth
 from arkos import applications
-from kraken.messages import Message, push_record
+from kraken.messages import JobMessageContext, push_record
 from kraken.jobs import as_job, job_response
 
 backend = Blueprint("apps", __name__)
@@ -62,12 +62,12 @@ class ApplicationsAPI(MethodView):
         return job_response(id, {"app": data})
 
     def _install(self, job, app):
-        message = Message(job=job)
+        message = JobMessageContext("Apps", job=job)
         app.install(message=message, force=True, cry=False)
         push_record("app", app.serialized)
 
     def _uninstall(self, job, app):
-        message = Message(job=job)
+        message = JobMessageContext("Apps", job=job)
         app.uninstall(message=message)
         push_record("app", app.serialized)
 

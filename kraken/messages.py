@@ -7,66 +7,106 @@ Written by Jacob Cook
 Licensed under GPLv3, see LICENSE.md
 """
 
+import logging
+
 from kraken import auth
 from flask import Blueprint, jsonify, abort
-from arkos.utilities import random_string
 from kraken.redis_storage import storage
+
+from arkos.system import systemtime
+from arkos.messages import MessageContext
 
 backend = Blueprint("messages", __name__)
 
 
-class Message:
-    """An asynchronous status message made available via polling."""
+class JobMessageContext(MessageContext):
+    """A context for asynchronous, updatable status messages for jobs."""
 
-    def __init__(self, cls="", msg="", head=None, job=None):
+    def __init__(self, comp, title=None, job=None):
         """
-        Initialize.
+        Create a new notification context.
 
-        :param str cls: Message class
-        :param str msg: Message text
-        :param str head: Message header text
+        :param str comp: Section of application to state as origin
+        :param str title: Message title text
         :param Job job: Job to update message through
         """
-        self.id = random_string()[0:10]
+        super().__init__(comp, title)
         self.job = job
-        self.head = head
-        if cls and msg:
-            data = {"id": self.id, "class": cls, "message": msg,
-                    "headline": head or self.head, "complete": True}
-        else:
-            data = {"id": self.id, "class": "info", "headline": None,
-                    "message": "Please wait...", "complete": False}
-        storage.append("genesis:messages", data)
-        if self.job:
-            self.job.update_message(cls, msg, head)
 
-    def update(self, cls, msg, head=None):
+    def info(self, comp, msg, title=None, complete=False):
         """
-        Send a message update.
+        Update the notification with an INFO message.
 
-        :param str cls: Message class
         :param str msg: Message text
-        :param str head: Message header text
+        :param str title: Message title text
+        :param bool complete: Is this the last message to be pushed?
         """
-        data = {"id": self.id, "class": cls, "message": msg,
-                "headline": head or self.head, "complete": False}
-        storage.append("genesis:messages", data)
+        super().info(msg, title, complete)
         if self.job:
-            self.job.update_message(cls, msg, head)
+            self.job.update_message("info", msg, title)
 
-    def complete(self, cls, msg, head=None):
+    def success(self, comp, msg, title=None, complete=False):
         """
-        Send a completed message at the end of the operation.
+        Update the notification with a SUCCESS message.
 
-        :param str cls: Message class
         :param str msg: Message text
-        :param str head: Message header text
+        :param str title: Message title text
+        :param bool complete: Is this the last message to be pushed?
         """
-        data = {"id": self.id, "class": cls, "message": msg,
-                "headline": head or self.head, "complete": True}
-        storage.append("genesis:messages", data)
+        super().success(msg, title, complete)
         if self.job:
-            self.job.update_message(cls, msg, head)
+            self.job.update_message("success", msg, title)
+
+    def warning(self, comp, msg, title=None, complete=False):
+        """
+        Update the notification with a WARN message.
+
+        :param str msg: Message text
+        :param str title: Message title text
+        :param bool complete: Is this the last message to be pushed?
+        """
+        super().warning(msg, title, complete)
+        if self.job:
+            self.job.update_message("warn", msg, title)
+
+    def error(self, comp, msg, title=None, complete=False):
+        """
+        Update the notification with an ERROR message.
+
+        :param str msg: Message text
+        :param str title: Message title text
+        :param bool complete: Is this the last message to be pushed?
+        """
+        super().error(msg, title, complete)
+        if self.job:
+            self.job.update_message("error", msg, title)
+
+    def debug(self, comp, msg, title=None, complete=False):
+        """
+        Update the notification with a DEBUG message.
+
+        :param str msg: Message text
+        :param str title: Message title text
+        :param bool complete: Is this the last message to be pushed?
+        """
+        super().debug(msg, title, complete)
+        if self.job:
+            self.job.update_message("debug", msg, title)
+
+
+class SerialFormatter(logging.Formatter):
+    def format(self, record):
+        data = record.msg
+        data.update({
+            "level": record.levelname,
+            "time": systemtime.get_iso_time(record.created, "unix")
+        })
+        return data
+
+
+class APIHandler(logging.Handler):
+    def emit(record):
+        storage.append("notifications", record)
 
 
 @backend.route('/api/genesis')

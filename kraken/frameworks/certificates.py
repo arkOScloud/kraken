@@ -12,7 +12,7 @@ from flask.views import MethodView
 
 from kraken import auth
 from arkos import certificates, websites, applications
-from kraken.messages import Message, push_record
+from kraken.messages import JobMessageContext, push_record
 from kraken.jobs import as_job, job_response
 
 backend = Blueprint("certs", __name__)
@@ -33,41 +33,45 @@ class CertificatesAPI(MethodView):
 
     @auth.required()
     def post(self):
-        if request.headers.get('Content-Type').startswith("application/json"):
+        head = request.headers
+        if head.get('Content-Type').startswith("application/json"):
             data = request.get_json()["cert"]
             id = as_job(self._generate, data)
             return job_response(id, data={"cert": {"id": data["id"]}})
-        elif request.headers.get('Content-Type').startswith("multipart/form-data"):
+        elif head.get('Content-Type').startswith("multipart/form-data"):
             name = request.form.get("id")
-            files = [request.files.get("file[0]").read(), request.files.get("file[1]").read(),
-                request.files.get("file[2]").read() if request.files.get("file[2]") else None]
+            files = [
+                request.files.get("file[0]").read(),
+                request.files.get("file[1]").read(),
+                request.files.get("file[2]").read()
+                if request.files.get("file[2]") else None]
             id = as_job(self._upload, name, files)
             return job_response(id)
         else:
             abort(400)
 
     def _generate(self, job, data):
-        message = Message(job=job)
-        message.update("info", "Generating certificate...")
+        message = JobMessageContext("Certificates", job=job)
         try:
-            cert = certificates.generate_certificate(data["id"], data["domain"],
-                data["country"], data["state"], data["locale"], data["email"],
-                data["keytype"], data["keylength"], message)
-            message.complete("success", "Certificate generated successfully")
+            cert = certificates.generate_certificate(
+                data["id"], data["domain"], data["country"], data["state"],
+                data["locale"], data["email"], data["keytype"],
+                data["keylength"], message)
             push_record("certs", cert.serialized)
         except Exception as e:
-            message.complete("error", "Certificate could not be generated: {0}".format(str(e)))
+            msg = "Certificate could not be generated: {0}".format(str(e))
+            message.error("Certificates", msg, complete=True)
             raise
 
     def _upload(self, job, name, files):
-        message = Message(job=job)
-        message.update("info", "Uploading certificate...")
+        message = JobMessageContext("Certificates", job=job)
         try:
-            cert = certificates.upload_certificate(name, files[0], files[1], files[2], message)
-            message.complete("success", "Certificate uploaded successfully")
+            cert = certificates.upload_certificate(
+                name, files[0], files[1], files[2], message)
             push_record("certs", cert.serialized)
         except Exception as e:
-            message.complete("error", "Certificate could not be uploaded: {0}".format(str(e)))
+            msg = "Certificate could not be uploaded: {0}".format(str(e))
+            message.error("Certificates", msg)
             raise
 
     @auth.required()
@@ -83,12 +87,13 @@ class CertificatesAPI(MethodView):
                     x.unassign(y)
                     push_record("certs", x.serialized)
         for x in cert.assigns:
-            if not x in data["assigns"]:
+            if x not in data["assigns"]:
                 cert.unassign(x)
         for x in data["assigns"]:
-            if not x in cert.assigns:
+            if x not in cert.assigns:
                 cert.assign(x)
-        return jsonify(cert=cert.serialized, message="Certificate updated successfully")
+        return jsonify(cert=cert.serialized,
+                       message="Certificate updated successfully")
 
     @auth.required()
     def delete(self, id):
@@ -112,7 +117,8 @@ class CertificateAuthoritiesAPI(MethodView):
                 data = f.read()
             resp = Response(data, mimetype="application/octet-stream")
             resp.headers["Content-Length"] = str(len(data.encode('utf-8')))
-            resp.headers["Content-Disposition"] = "attachment; filename={0}.pem".format(id)
+            aname = "attachment; filename={0}.pem".format(id)
+            resp.headers["Content-Disposition"] = aname
             return resp
         if type(certs) == list:
             return jsonify(certauths=[x.serialized for x in certs])
@@ -132,10 +138,11 @@ class CertificateAuthoritiesAPI(MethodView):
 @auth.required()
 def ssl_able():
     assigns = []
-    assigns.append({"type": "genesis", "id": "genesis", "name": "arkOS Genesis/API"})
+    assigns.append({"type": "genesis", "id": "genesis",
+                    "name": "arkOS Genesis/API"})
     for x in websites.get():
         assigns.append({"type": "website", "id": x.id,
-            "name": x.id if x.meta else x.name})
+                        "name": x.id if x.meta else x.name})
     for x in applications.get(installed=True):
         if x.type == "app" and x.uses_ssl:
             for y in x.get_ssl_able():
@@ -145,13 +152,13 @@ def ssl_able():
 
 certs_view = CertificatesAPI.as_view('certs_api')
 backend.add_url_rule('/api/certs', defaults={'id': None},
-    view_func=certs_view, methods=['GET',])
-backend.add_url_rule('/api/certs', view_func=certs_view, methods=['POST',])
+                     view_func=certs_view, methods=['GET', ])
+backend.add_url_rule('/api/certs', view_func=certs_view, methods=['POST', ])
 backend.add_url_rule('/api/certs/<string:id>', view_func=certs_view,
-    methods=['GET', 'PUT', 'DELETE'])
+                     methods=['GET', 'PUT', 'DELETE'])
 
 certauth_view = CertificateAuthoritiesAPI.as_view('cert_auths_api')
 backend.add_url_rule('/api/certauths', defaults={'id': None},
-    view_func=certauth_view, methods=['GET',])
+                     view_func=certauth_view, methods=['GET', ])
 backend.add_url_rule('/api/certauths/<string:id>', view_func=certauth_view,
-    methods=['GET', 'DELETE'])
+                     methods=['GET', 'DELETE'])
