@@ -12,6 +12,7 @@ from flask.views import MethodView
 
 from kraken import auth
 from arkos.system import users, groups, domains
+from arkos.utilities import errors
 
 backend = Blueprint("roles", __name__)
 
@@ -35,7 +36,7 @@ class UsersAPI(MethodView):
                 last_name=data["last_name"], domain=data["domain"],
                 admin=data["admin"], sudo=data["sudo"])
             u.add(data["passwd"])
-        except Exception as e:
+        except errors.InvalidConfigError as e:
             resp = jsonify(message="User couldn't be added: {0}".format(str(e)))
             resp.status_code = 422
             return resp
@@ -55,7 +56,7 @@ class UsersAPI(MethodView):
         u.mail = [str(x) for x in data["mail_addresses"]]
         try:
             u.update(data.get("passwd"))
-        except Exception as e:
+        except errors.InvalidConfigError as e:
             resp = jsonify(message="User couldn't be updated: {0}".format(str(e)))
             resp.status_code = 422
             return resp
@@ -68,7 +69,7 @@ class UsersAPI(MethodView):
             abort(404)
         try:
             u.delete()
-        except Exception as e:
+        except errors.InvalidConfigError as e:
             resp = jsonify(message="User couldn't be deleted: {0}".format(str(e)))
             resp.status_code = 422
             return resp
@@ -92,7 +93,7 @@ class GroupsAPI(MethodView):
         g = groups.Group(name=data["name"], users=data["users"])
         try:
             g.add()
-        except Exception as e:
+        except errors.InvalidConfigError as e:
             resp = jsonify(message="Group couldn't be added: {0}".format(str(e)))
             resp.status_code = 422
             return resp
@@ -107,7 +108,7 @@ class GroupsAPI(MethodView):
         g.users = [str(u) for u in data["users"]]
         try:
             g.update()
-        except Exception as e:
+        except errors.InvalidConfigError as e:
             resp = jsonify(message="Group couldn't be updated: {0}".format(str(e)))
             resp.status_code = 422
             return resp
@@ -120,7 +121,7 @@ class GroupsAPI(MethodView):
             abort(404)
         try:
             g.delete()
-        except Exception as e:
+        except errors.InvalidConfigError as e:
             resp = jsonify(message="Group couldn't be deleted: {0}".format(str(e)))
             resp.status_code = 422
             return resp
@@ -144,7 +145,7 @@ class DomainsAPI(MethodView):
         d = domains.Domain(name=data["id"])
         try:
             d.add()
-        except Exception as e:
+        except errors.InvalidConfigError as e:
             resp = jsonify(message="Domain couldn't be added: {0}".format(str(e)))
             resp.status_code = 422
             return resp
@@ -157,7 +158,7 @@ class DomainsAPI(MethodView):
             abort(404)
         try:
             d.remove()
-        except Exception as e:
+        except errors.InvalidConfigError as e:
             resp = jsonify(message="Domain couldn't be deleted: {0}".format(str(e)))
             resp.status_code = 422
             return resp

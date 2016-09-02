@@ -32,21 +32,11 @@ def run_daemon(environment, log_level, config_file, secrets_file,
     app.debug = environment in ["dev", "vagrant"]
     app.config["SECRET_KEY"] = random_string()
 
-    # Customize logging format
-    """
-    if not app.debug:
-        stdout = ConsoleHandler(sys.stdout, app.debug)
-        stdout.setLevel(log_level)
-        fmt_str = '%(asctime)s [%(levelname)s] %(module)s: %(message)s'
-        dformatter = logging.Formatter(fmt_str)
-        stdout.setFormatter(dformatter)
-        app.logger.addHandler(stdout)
-    """
-    app.logger.setLevel(log_level)
-
     # Open and load configuraton
-    config = arkos.init(config_file, secrets_file, policies_file, app.logger)
+    config = arkos.init(config_file, secrets_file, policies_file,
+                        app.debug, app.logger)
     logger.info("Init", "arkOS Kraken {0}".format(arkos.version))
+    logger.debug("Init", "*** DEBUG MODE ***")
     logger.info("Init", "Using config file at {0}".format(config.filename))
     app.conf = config
 
@@ -77,12 +67,8 @@ def run_daemon(environment, log_level, config_file, secrets_file,
     try:
         app.register_blueprint(genesis.backend)
     except:
-        warnmsg = ("Genesis failed to rebuild. If you can access Genesis,"
-                   " you may not be able to see recently installed apps."
-                   " See the logs for more information.")
         errmsg = ("Genesis failed to build. Kraken will finish loading"
                   " but you may not be able to access the Web interface.")
-        messages.Message("warn", warnmsg, head="Warning")
         logger.error("Init", errmsg)
 
     app.after_request(add_cors_to_response)

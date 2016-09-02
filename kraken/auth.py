@@ -66,6 +66,7 @@ def create_token(user):
             algorithm_name="HS256")
     return tjwss.dumps(payload).decode("utf-8")
 
+
 def verify(token=None):
     """
     Verify a provided JSON Web Token (JWT) for authentication.
