@@ -8,7 +8,6 @@ Licensed under GPLv3, see LICENSE.md
 """
 
 import logging
-import sys
 import ssl
 
 from kraken import auth, genesis, messages
@@ -16,6 +15,8 @@ from kraken import auth, genesis, messages
 import arkos
 from arkos import logger
 from arkos.utilities import *
+
+from kraken.messages import APIHandler
 from kraken.utilities import add_cors_to_response, make_json_error
 from kraken.framework import register_frameworks
 
@@ -48,6 +49,11 @@ def run_daemon(environment, log_level, config_file, secrets_file,
     logger.info("Init", "Detected platform: {0}".format(platform))
     app.conf.set("enviro", "run", environment)
     logger.info("Init", "Environment: {0}".format(environment))
+
+    apihdlr = APIHandler()
+    apihdlr.setLevel(logging.DEBUG if app.debug else logging.INFO)
+    apihdlr.addFilter(NotificationFilter())
+    logger.logger.addHandler(apihdlr)
 
     for code in list(default_exceptions.keys()):
         app.register_error_handler(code, make_json_error)

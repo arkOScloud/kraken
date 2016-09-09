@@ -107,6 +107,18 @@ class Storage:
         r = pipe or self.redis
         return self._get(r.lpop("arkos:{0}".format(key)))
 
+    def lindex(self, key, index, pipe=None):
+        """
+        Return a value from a list, given a specified index.
+
+        :param str key: Key name
+        :param int index: List index
+        :param pipe: Pipe to queue operations on
+        :returns: List value
+        """
+        r = pipe or self.redis
+        return self._get(r.lindex("arkos:{0}".format(key), index))
+
     def get_list(self, key):
         """
         Return an entire list.
@@ -274,6 +286,11 @@ class Storage:
         """
         r = pipe or self.redis
         r.expire("arkos:{0}".format(key), time)
+
+    def exists(self, key, pipe=None):
+        """Return True if a key exists."""
+        r = pipe or self.redis
+        return r.exists("arkos:{0}".format(key))
 
     def _get(self, value):
         if type(value) == bytes:

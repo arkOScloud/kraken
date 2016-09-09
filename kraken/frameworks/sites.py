@@ -10,9 +10,11 @@ Licensed under GPLv3, see LICENSE.md
 from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
+from arkos import applications, certificates, websites
+from arkos.messages import Notification, NotificationThread
+
 from kraken import auth
-from arkos import applications, certificates, notify, websites
-from kraken.messages import JobMessageContext, push_record, remove_record
+from kraken.messages import push_record, remove_record
 from kraken.jobs import as_job, job_response
 
 backend = Blueprint("websites", __name__)
@@ -38,14 +40,14 @@ class WebsitesAPI(MethodView):
         return job_response(id)
 
     def _post(self, job, data):
-        message = JobMessageContext("Websites", job=job)
+        nthread = NotificationThread(id=job.id)
         sapp = applications.get(data["site_type"])
         site = sapp._website
         site = site(data["id"], data["addr"], data["port"])
         try:
-            specialmsg = site.install(sapp, data["extra_data"], True, message)
+            specialmsg = site.install(sapp, data["extra_data"], True, nthread)
             if specialmsg:
-                notify.info("Websites", specialmsg)
+                Notification("info", "Websites", specialmsg).send()
             push_record("website", site.serialized)
         except Exception as e:
             remove_record("website", data["id"])
@@ -82,9 +84,9 @@ class WebsitesAPI(MethodView):
         return job_response(id)
 
     def _delete(self, job, id):
-        message = JobMessageContext("Websites", job=job)
+        nthread = NotificationThread(id=job.id)
         site = websites.get(id)
-        site.remove(message)
+        site.remove(nthread)
         remove_record("website", id)
         remove_record("policy", id)
 

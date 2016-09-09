@@ -11,11 +11,11 @@ import os
 
 from flask import Blueprint, request, jsonify
 
-from kraken import auth, genesis
+from kraken import auth
 from kraken.jobs import as_job
-from kraken.messages import MessageContext
 
 from arkos import applications, config, security
+from arkos.messages import Notification, NotificationThread
 from arkos.utilities import shell, random_string
 from arkos.system import filesystems
 
@@ -24,28 +24,27 @@ backend = Blueprint("firstrun", __name__)
 
 def install(job, to_install):
     errors = False
-    message = MessageContext("FirstRun", "Setting up your server...", job=job)
+    nthread = NotificationThread(id=job.id)
+    nthread.title = "Setting up your server..."
+
     for x in to_install:
         a = applications.get(x)
+        msg = "Installing {0}...".format(x)
+        nthread.update(Notification("info", "FirstRun", msg))
         try:
-            a.install(message=message)
+            a.install()
         except:
             errors = True
+
     if to_install:
-        try:
-            genesis.genesis_build()
-        except:
-            msg = "Genesis rebuild failed. Please try to manually rebuild."
-            message.error(msg, complete=True)
         if errors:
             msg = ("One or more applications failed to install. "
                    "Check the App Store pane for more information.")
-            message.warning(msg, complete=True)
+            nthread.complete(Notification("warning", "FirstRun", msg))
         else:
             msg = ("You may need to restart your device before "
                    "changes will take effect.")
-            title = "Applications installed successfully"
-            message.success(msg, title=title, complete=True)
+            nthread.complete(Notification("success", "FirstRun", msg))
 
 
 @backend.route('/api/firstrun', methods=["POST"])
@@ -100,6 +99,6 @@ def firstrun():
     if data.get("install"):
         as_job(install, data["install"])
     security.initialize_firewall()
-    rootpwd = random_string()[:16]
+    rootpwd = random_string(16)
     shell("passwd root", stdin="{0}\n{0}\n".format(rootpwd))
     return jsonify(rootpwd=rootpwd)

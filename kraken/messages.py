@@ -7,106 +7,39 @@ Written by Jacob Cook
 Licensed under GPLv3, see LICENSE.md
 """
 
+import datetime
 import logging
 
 from kraken import auth
 from flask import Blueprint, jsonify, abort
 from kraken.redis_storage import storage
 
-from arkos.system import systemtime
-from arkos.messages import MessageContext
+from arkos.utilities import random_string
 
 backend = Blueprint("messages", __name__)
 
 
-class JobMessageContext(MessageContext):
-    """A context for asynchronous, updatable status messages for jobs."""
-
-    def __init__(self, comp, title=None, job=None):
-        """
-        Create a new notification context.
-
-        :param str comp: Section of application to state as origin
-        :param str title: Message title text
-        :param Job job: Job to update message through
-        """
-        super().__init__(comp, title)
-        self.job = job
-
-    def info(self, comp, msg, title=None, complete=False):
-        """
-        Update the notification with an INFO message.
-
-        :param str msg: Message text
-        :param str title: Message title text
-        :param bool complete: Is this the last message to be pushed?
-        """
-        super().info(msg, title, complete)
-        if self.job:
-            self.job.update_message("info", msg, title)
-
-    def success(self, comp, msg, title=None, complete=False):
-        """
-        Update the notification with a SUCCESS message.
-
-        :param str msg: Message text
-        :param str title: Message title text
-        :param bool complete: Is this the last message to be pushed?
-        """
-        super().success(msg, title, complete)
-        if self.job:
-            self.job.update_message("success", msg, title)
-
-    def warning(self, comp, msg, title=None, complete=False):
-        """
-        Update the notification with a WARN message.
-
-        :param str msg: Message text
-        :param str title: Message title text
-        :param bool complete: Is this the last message to be pushed?
-        """
-        super().warning(msg, title, complete)
-        if self.job:
-            self.job.update_message("warn", msg, title)
-
-    def error(self, comp, msg, title=None, complete=False):
-        """
-        Update the notification with an ERROR message.
-
-        :param str msg: Message text
-        :param str title: Message title text
-        :param bool complete: Is this the last message to be pushed?
-        """
-        super().error(msg, title, complete)
-        if self.job:
-            self.job.update_message("error", msg, title)
-
-    def debug(self, comp, msg, title=None, complete=False):
-        """
-        Update the notification with a DEBUG message.
-
-        :param str msg: Message text
-        :param str title: Message title text
-        :param bool complete: Is this the last message to be pushed?
-        """
-        super().debug(msg, title, complete)
-        if self.job:
-            self.job.update_message("debug", msg, title)
-
-
-class SerialFormatter(logging.Formatter):
-    def format(self, record):
-        data = record.msg
-        data.update({
-            "level": record.levelname,
-            "time": systemtime.get_iso_time(record.created, "unix")
-        })
-        return data
-
-
 class APIHandler(logging.Handler):
-    def emit(record):
-        storage.append("notifications", record)
+    def emit(self, record):
+        data = record.msg
+        if type(data) in [str, bytes]:
+            data = {"id": id or random_string(16), "message": record.msg,
+                    "thread_id": random_string(16), "title": None,
+                    "comp": "Unknown", "cls": "runtime", "complete": True}
+        levelname = "critical"
+        logtime = datetime.datetime.fromtimestamp(record.created)
+        logtime = logtime.strftime("%Y-%m-%d %H:%M:%S")
+        logtime = "%s,%03d" % (logtime, record.msecs)
+        data.update({"cls": data["cls"], "level": record.levelname.lower(),
+                     "time": logtime})
+        pipe = storage.pipeline()
+        tid = "notifications:{0}".format(data["thread_id"])
+        kid = "notifications:{0}:{1}".format(data["thread_id"], data["id"])
+        storage.set(kid, data, pipe=pipe)
+        storage.append(tid, data["id"], pipe)
+        storage.expire(tid, 604800, pipe)
+        storage.expire(kid, 604800, pipe)
+        pipe.execute()
 
 
 @backend.route('/api/genesis')
@@ -141,12 +74,15 @@ def get_jobs():
 @auth.required()
 def get_job(id):
     """Endpoint to return information about a specific job."""
-    job = storage.get_all("job:{0}".format(id))
+    data = {}
+    job = storage.get("job:{0}".format(id))
     if not job:
         abort(404)
-    response = jsonify(**job)
-    response.status_code = int(job["status"])
-    return response
+    if storage.exists("notifications:{0}".format(id)):
+        last_msg = storage.lindex("notifications:{0}".format(id), -1)
+        fid = "notifications:{0}:{1}".format(id, last_msg)
+        data = storage.get_all(fid)
+    return jsonify(**data), int(job)
 
 
 def push_record(name, model):

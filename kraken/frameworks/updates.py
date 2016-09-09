@@ -10,9 +10,11 @@ Licensed under GPLv3, see LICENSE.md
 from flask import Blueprint, jsonify, request
 from flask.views import MethodView
 
+from arkos import logger, storage, updates
+from arkos.messages import NotificationThread
+
 from kraken import auth
-from arkos import notify, storage, updates
-from kraken.messages import JobMessageContext, remove_record
+from kraken.messages import remove_record
 from kraken.jobs import as_job, job_response
 
 backend = Blueprint("updates", __name__)
@@ -29,7 +31,7 @@ class UpdatesAPI(MethodView):
             except:
                 msg = ("Could not reach the update server. "
                        "Please check your Internet settings.")
-                notify.error("Updates", msg, title="Update check failed")
+                logger.error("Updates", msg)
         for x in data:
             if id == x["id"]:
                 return jsonify(update={"id": x["id"], "name": x["name"],
@@ -44,8 +46,8 @@ class UpdatesAPI(MethodView):
         return job_response(id)
 
     def _post(self, job):
-        message = JobMessageContext("Updates", job=job)
-        installed = updates.install_updates(message)
+        nthread = NotificationThread(id=job.id)
+        installed = updates.install_updates(nthread)
         for x in installed:
             remove_record("update", x)
         updates.check_updates()

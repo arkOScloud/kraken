@@ -12,9 +12,11 @@ import os
 from flask import Blueprint, abort, jsonify, request, send_from_directory
 from flask.views import MethodView
 
-from kraken import auth
 from arkos import applications
-from kraken.messages import JobMessageContext, push_record
+from arkos.messages import NotificationThread
+
+from kraken import auth
+from kraken.messages import push_record
 from kraken.jobs import as_job, job_response
 
 backend = Blueprint("apps", __name__)
@@ -62,13 +64,13 @@ class ApplicationsAPI(MethodView):
         return job_response(id, {"app": data})
 
     def _install(self, job, app):
-        message = JobMessageContext("Apps", job=job)
-        app.install(message=message, force=True, cry=False)
+        nthread = NotificationThread(id=job.id)
+        app.install(nthread=nthread, force=True, cry=False)
         push_record("app", app.serialized)
 
     def _uninstall(self, job, app):
-        message = JobMessageContext("Apps", job=job)
-        app.uninstall(message=message)
+        nthread = NotificationThread(id=job.id)
+        app.uninstall(nthread=nthread)
         push_record("app", app.serialized)
 
 

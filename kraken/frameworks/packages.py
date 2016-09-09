@@ -12,9 +12,11 @@ import pacman
 from flask import Blueprint, jsonify, request, abort
 from flask.views import MethodView
 
+from arkos.messages import Notification, NotificationThread
+
 from kraken import auth
 from kraken.jobs import as_job, job_response
-from kraken.messages import JobMessageContext, push_record
+from kraken.messages import push_record
 
 backend = Blueprint("packages", __name__)
 
@@ -50,9 +52,10 @@ class PackagesAPI(MethodView):
             try:
                 pacman.refresh()
                 prereqs = pacman.needs_for(install)
-                title = "Installing {0} package(s): ".format(len(prereqs))
-                message = JobMessageContext("Packages", title=title, job=job)
-                message.info("Packages", ", ".join(prereqs))
+                title = "Installing {0} package(s)".format(len(prereqs))
+                msg = Notification("info", "Packages", ", ".join(prereqs))
+                nthread = NotificationThread(
+                    id=job.id, title=title, message=msg)
                 pacman.install(install)
                 for x in prereqs:
                     try:
@@ -63,14 +66,15 @@ class PackagesAPI(MethodView):
                     except:
                         pass
             except Exception as e:
-                message.error("Packages", str(e), complete=True)
+                nthread.complete(Notification("error", "Packages", str(e)))
                 return
         if remove:
             try:
                 prereqs = pacman.depends_for(remove)
-                title = "Removing {0} package(s): ".format(len(prereqs))
-                message = JobMessageContext("Packages", title=title, job=job)
-                message.info("Packages", ", ".join(prereqs))
+                title = "Removing {0} package(s)".format(len(prereqs))
+                msg = Notification("info", "Packages", ", ".join(prereqs))
+                nthread = NotificationThread(
+                    id=job.id, title=title, message=msg)
                 pacman.remove(remove)
                 for x in prereqs:
                     try:
@@ -81,10 +85,10 @@ class PackagesAPI(MethodView):
                     except:
                         pass
             except Exception as e:
-                message.error("Packages", str(e), complete=True)
+                nthread.complete(Notification("error", "Packages", str(e)))
                 return
         msg = "Operations completed successfully"
-        message.success("Packages", msg, complete=True)
+        nthread.complete(Notification("success", "Packages", msg))
 
 
 def process_info(info):

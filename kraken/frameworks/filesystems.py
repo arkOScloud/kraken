@@ -10,9 +10,11 @@ Licensed under GPLv3, see LICENSE.md
 from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
-from kraken import auth
+from arkos.messages import Notification, NotificationThread
 from arkos.system import filesystems
-from kraken.messages import JobMessageContext, push_record
+
+from kraken import auth
+from kraken.messages import push_record
 from kraken.jobs import as_job, job_response
 
 backend = Blueprint("filesystems", __name__)
@@ -36,26 +38,19 @@ class DisksAPI(MethodView):
         return job_response(id, data={"filesystem": data})
 
     def _post(self, job, data):
-        message = JobMessageContext("Filesystems", job=job)
-        message.info("Filesystems", "Creating virtual disk...")
+        nthread = NotificationThread(id=job.id)
         disk = filesystems.VirtualDisk(id=data["id"], size=data["size"])
-        try:
-            disk.create()
-        except Exception as e:
-            msg = "Virtual disk could not be created: {0}".format(str(e))
-            message.error("Filesystems", msg, complete=True)
-            raise
+        disk.create(will_crypt=True, nthread=nthread)
         if data["crypt"]:
             try:
-                message.info("Filesystems", "Encrypting virtual disk...")
+                msg = "Encrypting virtual disk..."
+                nthread.update(Notification("info", "Filesystems", msg))
                 disk.encrypt(data["passwd"])
             except Exception as e:
                 disk.remove()
-                msg = "Virtual disk could not be encrypted: {0}".format(str(e))
-                message.error("Filesystems", msg, complete=True)
                 raise
         msg = "Virtual disk created successfully"
-        message.success("Filesystems", msg, complete=True)
+        nthread.complete(Notification("Filesystems", msg))
         push_record("filesystem", disk.serialized)
 
     @auth.required()

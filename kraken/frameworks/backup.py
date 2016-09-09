@@ -10,9 +10,11 @@ Licensed under GPLv3, see LICENSE.md
 from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
-from kraken import auth
 from arkos import backup
-from kraken.messages import JobMessageContext, push_record
+from arkos.messages import NotificationThread
+
+from kraken import auth
+from kraken.messages import push_record
 from kraken.jobs import as_job, job_response
 
 backend = Blueprint("backup", __name__)
@@ -38,16 +40,9 @@ class BackupsAPI(MethodView):
         return job_response(id)
 
     def _post(self, job, id):
-        message = JobMessageContext("Backups", job=job)
-        message.info("Backups", "Backing up {0}...".format(id))
-        try:
-            b = backup.create(id)
-            msg = "{0} backed up successfully".format(id)
-            message.success("Backups", msg, complete=True)
-            push_record("backups", b)
-        except Exception as e:
-            msg = "{0} could not be backed up: {1}".format(id, str(e))
-            message.error("Backups", msg, complete=True)
+        nthread = NotificationThread(id=job.id)
+        b = backup.create(id, nthread=nthread)
+        push_record("backups", b)
 
     @auth.required()
     def put(self, id, time):
@@ -60,16 +55,9 @@ class BackupsAPI(MethodView):
             abort(404)
 
     def _put(self, job, data):
-        message = JobMessageContext(job=job)
-        message.info("Backups", "Restoring {0}...".format(data["pid"]))
-        try:
-            b = backup.restore(data)
-            msg = "{0} restored successfully".format(b["pid"])
-            message.success("Backups", msg, complete=True)
-            push_record("backup", b)
-        except Exception as e:
-            msg = "{0} could not be restored: {1}".format(data["pid"], str(e))
-            message.error("Backups", msg, complete=True)
+        nthread = NotificationThread(id=job.id)
+        b = backup.restore(data, nthread=nthread)
+        push_record("backup", b)
 
     @auth.required()
     def delete(self, id, time):

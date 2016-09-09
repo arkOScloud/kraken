@@ -10,9 +10,11 @@ Licensed under GPLv3, see LICENSE.md
 from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
-from kraken import auth
 from arkos import certificates, websites, applications
-from kraken.messages import JobMessageContext, push_record
+from arkos.messages import Notification, NotificationThread
+
+from kraken import auth
+from kraken.messages import push_record
 from kraken.jobs import as_job, job_response
 
 backend = Blueprint("certs", __name__)
@@ -51,28 +53,18 @@ class CertificatesAPI(MethodView):
             abort(400)
 
     def _generate(self, job, data):
-        message = JobMessageContext("Certificates", job=job)
-        try:
-            cert = certificates.generate_certificate(
-                data["id"], data["domain"], data["country"], data["state"],
-                data["locale"], data["email"], data["keytype"],
-                data["keylength"], message)
-            push_record("certs", cert.serialized)
-        except Exception as e:
-            msg = "Certificate could not be generated: {0}".format(str(e))
-            message.error("Certificates", msg, complete=True)
-            raise
+        nthread = NotificationThread(id=job.id)
+        cert = certificates.generate_certificate(
+            data["id"], data["domain"], data["country"], data["state"],
+            data["locale"], data["email"], data["keytype"],
+            data["keylength"], nthread)
+        push_record("certs", cert.serialized)
 
     def _upload(self, job, name, files):
-        message = JobMessageContext("Certificates", job=job)
-        try:
-            cert = certificates.upload_certificate(
-                name, files[0], files[1], files[2], message)
-            push_record("certs", cert.serialized)
-        except Exception as e:
-            msg = "Certificate could not be uploaded: {0}".format(str(e))
-            message.error("Certificates", msg)
-            raise
+        nthread = NotificationThread(id=job.id)
+        cert = certificates.upload_certificate(
+            name, files[0], files[1], files[2], nthread)
+        push_record("certs", cert.serialized)
 
     @auth.required()
     def put(self, id):

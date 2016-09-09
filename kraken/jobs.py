@@ -39,7 +39,7 @@ class Job(threading.Thread):
         :param kwargs: Keyword arguments to pass to executable function
         """
         threading.Thread.__init__(self)
-        self._id = id
+        self.id = id
         self._func = func
         self._args = args
         self._kwargs = kwargs
@@ -52,33 +52,16 @@ class Job(threading.Thread):
 
     def run(self):
         """Execute the job's function."""
-        storage.set("job:{0}".format(self._id),
-                    {"status": self.status_code, "message": None,
-                     "class": None, "headline": None})
+        storage.set("job:{0}".format(self.id), self.status_code)
         try:
             self._func(self, *self._args, **self._kwargs)
         except Exception as e:
             self.status_code = 500
-            storage.set(
-                "job:{0}".format(self._id),
-                {"status": self.status_code, "message": str(e),
-                 "class": "error"})
+            storage.set("job:{0}".format(self.id), self.status_code)
+            raise
         else:
-            storage.set("job:{0}".format(self._id),
-                        {"status": self._success_code})
-        storage.expire("job:{0}".format(self._id), 43200)
-
-    def update_message(self, cls="", msg="", head=None):
-        """
-        Update a job's status message.
-
-        :param str cls: Message class
-        :param str msg: Message text
-        :param str head: Message header text
-        """
-        storage.set("job:{0}".format(self._id),
-                    {"status": self.status_code, "message": msg, "class": cls,
-                     "headline": head})
+            storage.set("job:{0}".format(self.id), self._success_code)
+        storage.expire("job:{0}".format(self.id), 43200)
 
 
 def as_job(func, *args, **kwargs):
@@ -89,7 +72,7 @@ def as_job(func, *args, **kwargs):
     :param args: Additional arguments to pass to executable function
     :param kwargs: Keyword arguments to pass to executable function
     """
-    id = random_string()[0:16]
+    id = random_string(16)
     j = Job(id, func, *args, **kwargs)
     j.start()
     return id
