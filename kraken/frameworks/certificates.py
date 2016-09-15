@@ -11,7 +11,7 @@ from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
 from arkos import certificates, websites, applications
-from arkos.messages import Notification, NotificationThread
+from arkos.messages import NotificationThread
 
 from kraken import auth
 from kraken.messages import push_record

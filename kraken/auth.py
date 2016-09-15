@@ -11,7 +11,7 @@ from itsdangerous import TimedJSONWebSignatureSerializer, SignatureExpired
 from itsdangerous import BadSignature
 from functools import wraps
 
-from arkos import config, secrets
+from arkos import config, secrets, logger
 from arkos.system import users, systemtime
 from flask import current_app, Blueprint, request, jsonify
 
@@ -50,7 +50,7 @@ def create_token(user):
     except:
         twarn = ("System time is not accurate or could not be verified."
                  " Access tokens will not expire.")
-        current_app.logger.warning(twarn)
+        logger.warning("System", twarn)
         iat = None
     payload = {
         "uid": user.name,
