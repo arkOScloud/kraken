@@ -29,17 +29,17 @@ class CertificatesAPI(MethodView):
         if id and not certs:
             abort(404)
         if type(certs) == list:
-            return jsonify(certs=[x.serialized for x in certs])
+            return jsonify(certificates=[x.serialized for x in certs])
         else:
-            return jsonify(cert=certs.serialized)
+            return jsonify(certificate=certs.serialized)
 
     @auth.required()
     def post(self):
         head = request.headers
         if head.get('Content-Type').startswith("application/json"):
-            data = request.get_json()["cert"]
+            data = request.get_json()["certificate"]
             id = as_job(self._generate, data)
-            return job_response(id, data={"cert": {"id": data["id"]}})
+            return job_response(id, data={"certificate": {"id": data["id"]}})
         elif head.get('Content-Type').startswith("multipart/form-data"):
             name = request.form.get("id")
             files = [
@@ -58,17 +58,17 @@ class CertificatesAPI(MethodView):
             data["id"], data["domain"], data["country"], data["state"],
             data["locale"], data["email"], data["keytype"],
             data["keylength"], nthread)
-        push_record("certs", cert.serialized)
+        push_record("certificates", cert.serialized)
 
     def _upload(self, job, name, files):
         nthread = NotificationThread(id=job.id)
         cert = certificates.upload_certificate(
             name, files[0], files[1], files[2], nthread)
-        push_record("certs", cert.serialized)
+        push_record("certificates", cert.serialized)
 
     @auth.required()
     def put(self, id):
-        data = request.get_json()["cert"]
+        data = request.get_json()["certificate"]
         cert = certificates.get(id)
         other_certs = [x for x in certificates.get() if x.id != id]
         if not id or not cert:
@@ -77,14 +77,14 @@ class CertificatesAPI(MethodView):
             for y in data["assigns"]:
                 if y in x.assigns:
                     x.unassign(y)
-                    push_record("certs", x.serialized)
+                    push_record("certificates", x.serialized)
         for x in cert.assigns:
             if x not in data["assigns"]:
                 cert.unassign(x)
         for x in data["assigns"]:
             if x not in cert.assigns:
                 cert.assign(x)
-        return jsonify(cert=cert.serialized,
+        return jsonify(certificate=cert.serialized,
                        message="Certificate updated successfully")
 
     @auth.required()
@@ -113,9 +113,9 @@ class CertificateAuthoritiesAPI(MethodView):
             resp.headers["Content-Disposition"] = aname
             return resp
         if type(certs) == list:
-            return jsonify(certauths=[x.serialized for x in certs])
+            return jsonify(authorities=[x.serialized for x in certs])
         else:
-            return jsonify(certauth=certs.serialized)
+            return jsonify(authority=certs.serialized)
 
     @auth.required()
     def delete(self, id):
@@ -126,7 +126,7 @@ class CertificateAuthoritiesAPI(MethodView):
         return Response(status=204)
 
 
-@backend.route('/api/certassigns')
+@backend.route('/api/assignments')
 @auth.required()
 def ssl_able():
     assigns = []
@@ -139,18 +139,19 @@ def ssl_able():
         if x.type == "app" and x.uses_ssl:
             for y in x.get_ssl_able():
                 assigns.append(y)
-    return jsonify(certassigns=assigns)
+    return jsonify(assignments=assigns)
 
 
 certs_view = CertificatesAPI.as_view('certs_api')
-backend.add_url_rule('/api/certs', defaults={'id': None},
+backend.add_url_rule('/api/certificates', defaults={'id': None},
                      view_func=certs_view, methods=['GET', ])
-backend.add_url_rule('/api/certs', view_func=certs_view, methods=['POST', ])
-backend.add_url_rule('/api/certs/<string:id>', view_func=certs_view,
+backend.add_url_rule('/api/certificates', view_func=certs_view,
+                     methods=['POST', ])
+backend.add_url_rule('/api/certificates/<string:id>', view_func=certs_view,
                      methods=['GET', 'PUT', 'DELETE'])
 
 certauth_view = CertificateAuthoritiesAPI.as_view('cert_auths_api')
-backend.add_url_rule('/api/certauths', defaults={'id': None},
+backend.add_url_rule('/api/authorities', defaults={'id': None},
                      view_func=certauth_view, methods=['GET', ])
-backend.add_url_rule('/api/certauths/<string:id>', view_func=certauth_view,
+backend.add_url_rule('/api/authorities/<string:id>', view_func=certauth_view,
                      methods=['GET', 'DELETE'])

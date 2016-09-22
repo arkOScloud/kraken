@@ -16,7 +16,7 @@ import traceback
 
 from flask import jsonify, request
 
-from arkos import config, version
+from arkos import config, logger, version
 from arkos import storage as arkos_storage
 from arkos.utilities import shell
 from werkzeug.exceptions import HTTPException
@@ -56,6 +56,7 @@ def make_json_error(err):
         response = jsonify(message=message, stacktrace=stacktrace,
                            report=report, version=version,
                            arch=config.get("enviro", "arch"))
+        logger.critical("Unknown", stacktrace)
     else:
         response = jsonify(message=message)
     response.status_code = err.code if isinstance(err, HTTPException) else 500

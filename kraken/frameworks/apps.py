@@ -84,13 +84,13 @@ def dispatcher(id, path):
     return fn(*params[1:])
 
 
-@backend.route('/api/apps/logo/<string:id>')
-def get_app_logo(id):
+@backend.route('/api/apps/assets/<string:id>/<string:asset>')
+def get_app_asset(id, asset):
     app = applications.get(id)
     if not app:
         abort(404)
     return send_from_directory(
-        os.path.join('/var/lib/arkos/applications', id, 'assets'), "logo.png")
+        os.path.join('/var/lib/arkos/applications', id, 'assets'), asset)
 
 
 apps_view = ApplicationsAPI.as_view('apps_api')

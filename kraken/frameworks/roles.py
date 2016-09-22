@@ -90,7 +90,7 @@ class GroupsAPI(MethodView):
     @auth.required()
     def post(self):
         data = request.get_json()["group"]
-        g = groups.Group(name=data["name"], users=data["users"])
+        g = groups.Group(name=data["name"], users=data.get("users", []))
         try:
             g.add()
         except errors.InvalidConfigError as e:

@@ -228,8 +228,8 @@ def download(id):
 
 def as_dict(path, content=False):
     name = os.path.basename(path)
-    data = {"id": path_to_b64(path), "name": name, "path": path, "folder": False,
-        "hidden": name.startswith(".")}
+    data = {"id": path_to_b64(path).decode(), "name": name.decode(),
+            "path": path.decode(), "folder": False, "hidden": name.startswith(b".")}
     fstat = os.lstat(path)
     mode = fstat[stat.ST_MODE]
 
@@ -239,7 +239,7 @@ def as_dict(path, content=False):
         data["icon"] = "fa-hdd-o"
     elif stat.S_ISLNK(mode):
         data["type"] = "link"
-        data["realpath"] = os.path.realpath(path)
+        data["realpath"] = os.path.realpath(path).decode()
         data["folder"] = os.path.isdir(data["realpath"])
         data["icon"] = "fa-link"
     elif stat.S_ISDIR(mode):
@@ -253,7 +253,7 @@ def as_dict(path, content=False):
         data["type"] = "block"
         data["icon"] = "fa-hdd-o"
     elif stat.S_ISREG(mode):
-        if name.endswith((".tar", ".gz", ".tar.gz", ".tgz", ".bz2", ".tar.bz2", ".tbz2", ".zip")):
+        if name.endswith((b".tar", b".gz", b".tar.gz", b".tgz", b".bz2", b".tar.bz2", b".tbz2", b".zip")):
             data["type"] = "archive"
         else:
             data["type"] = "file"
@@ -284,14 +284,15 @@ def as_dict(path, content=False):
                 data["binary"] = True
     else:
         data["binary"] = False
-    data["mimetype"] = mimetypes.guess_type(path)[0]
+    data["mimetype"] = mimetypes.guess_type(path.decode())[0]
     data["selected"] = False
     if content:
         with open(path, "r") as f:
-            data["content"] = f.read()
+            data["content"] = f.read().decode()
     return data
 
 def guess_file_icon(name):
+    name = name.decode()
     if name.endswith((".xls", ".xlsx", ".ods")):
         return "fa-file-excel-o"
     elif name.endswith((".mp3", ".wav", ".flac", ".ogg", ".m4a", ".wma", ".aac")):
