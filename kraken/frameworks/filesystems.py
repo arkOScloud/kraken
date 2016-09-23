@@ -40,7 +40,7 @@ class DisksAPI(MethodView):
     def _post(self, job, data):
         nthread = NotificationThread(id=job.id)
         disk = filesystems.VirtualDisk(id=data["id"], size=data["size"])
-        disk.create(will_crypt=True, nthread=nthread)
+        disk.create(will_crypt=data["crypt"], nthread=nthread)
         if data["crypt"]:
             try:
                 msg = "Encrypting virtual disk..."
@@ -49,8 +49,8 @@ class DisksAPI(MethodView):
             except Exception as e:
                 disk.remove()
                 raise
-        msg = "Virtual disk created successfully"
-        nthread.complete(Notification("Filesystems", msg))
+            msg = "Virtual disk created successfully"
+            nthread.complete(Notification("success", "Filesystems", msg))
         push_record("filesystem", disk.serialized)
 
     @auth.required()

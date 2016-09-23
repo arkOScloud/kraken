@@ -31,14 +31,18 @@ class DatabasesAPI(MethodView):
             resp.headers["Content-Disposition"] = "attachment; filename={0}.sql".format(id)
             return resp
         if type(dbs) == list:
-            return jsonify(databases=[x.serialized for x in dbs])
+            db_types = (x.manager.serialized for x in dbs)
+            db_types = list({v['id']: v for v in db_types}.values())
+            return jsonify(databases=[x.serialized for x in dbs],
+                           database_types=db_types)
         else:
-            return jsonify(database=dbs.serialized)
+            return jsonify(database=dbs.serialized,
+                           database_type=dbs.manager.serialized)
 
     @auth.required()
     def post(self):
         data = request.get_json()["database"]
-        manager = databases.get_managers(data["type_id"])
+        manager = databases.get_managers(data["database_type"])
         try:
             db = manager.add_db(data["id"])
         except Exception as e:
@@ -84,14 +88,18 @@ class DatabaseUsersAPI(MethodView):
         if id and not u:
             abort(404)
         if type(u) == list:
-            return jsonify(database_users=[x.serialized for x in u])
+            db_types = (x.manager.serialized for x in u)
+            db_types = list({v['id']: v for v in db_types}.values())
+            return jsonify(database_users=[x.serialized for x in u],
+                           database_types=db_types)
         else:
-            return jsonify(database_user=u.serialized)
+            return jsonify(database_user=u.serialized,
+                           database_type=u.manager.serialized)
 
     @auth.required()
     def post(self):
         data = request.get_json()["database_user"]
-        manager = databases.get_managers(data["type"])
+        manager = databases.get_managers(data["database_type"])
         try:
             u = manager.add_user(data["id"], data["passwd"])
         except Exception as e:

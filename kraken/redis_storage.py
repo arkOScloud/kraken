@@ -308,7 +308,7 @@ class Storage:
 
     def _translate(self, value):
         if value.startswith((b"[", b"{")) and value.endswith((b"]", b"}")):
-            return json.loads(value)
+            return json.loads(value.decode())
         if type(value) == bytes:
             value = value.decode()
         return value
