@@ -16,7 +16,7 @@ import stat
 
 from arkos import shared_files
 from arkos.system import users, groups
-from arkos.utilities import b64_to_path, path_to_b64, compress, extract, str_fperms, random_string
+from arkos.utilities import b, is_binary, b64_to_path, path_to_b64, compress, extract, str_fperms, random_string
 
 from kraken import auth
 from werkzeug import secure_filename
@@ -125,14 +125,14 @@ class FileManagerAPI(MethodView):
                     os.chown(data["path"], u.uid, g.gid)
             if data["perms"]["oct"] != orig["perms"]["oct"]:
                 if data["folder"]:
-                    os.chmod(data["path"], int(data["perms"]["oct"][1:], 8))
+                    os.chmod(data["path"], int(data["perms"]["oct"], 8))
                     for r, d, f in os.walk(data["path"]):
                         for x in d:
-                            os.chmod(os.path.join(r, x), int(data["perms"]["oct"][1:], 8))
+                            os.chmod(os.path.join(r, x), int(data["perms"]["oct"], 8))
                         for x in f:
-                            os.chmod(os.path.join(r, x), int(data["perms"]["oct"][1:], 8))
+                            os.chmod(os.path.join(r, x), int(data["perms"]["oct"], 8))
                 else:
-                    os.chmod(data["path"], int(data["perms"]["oct"][1:], 8))
+                    os.chmod(data["path"], int(data["perms"]["oct"], 8))
             return jsonify(file=as_dict(data["path"]))
         else:
             abort(422)
@@ -168,7 +168,7 @@ class SharingAPI(MethodView):
     @auth.required()
     def post(self):
         data = request.get_json()["share"]
-        id = random_string()
+        id = random_string(16)
         share = shared_files.SharedFile(id, data["path"], data.get("expires", 0))
         share.add()
         return jsonify(share=share.serialized)
@@ -199,7 +199,7 @@ def download(id):
     item = shared_files.get(id)
     if not item:
         abort(404)
-    if item.is_expired():
+    if item.is_expired:
         item.delete()
         resp = jsonify(message="The requested item has expired")
         resp.status_code = 410
@@ -228,8 +228,8 @@ def download(id):
 
 def as_dict(path, content=False):
     name = os.path.basename(path)
-    data = {"id": path_to_b64(path).decode(), "name": name.decode(),
-            "path": path.decode(), "folder": False, "hidden": name.startswith(b".")}
+    data = {"id": path_to_b64(path), "name": name,
+            "path": path, "folder": False, "hidden": name.startswith(".")}
     fstat = os.lstat(path)
     mode = fstat[stat.ST_MODE]
 
@@ -239,7 +239,7 @@ def as_dict(path, content=False):
         data["icon"] = "fa-hdd-o"
     elif stat.S_ISLNK(mode):
         data["type"] = "link"
-        data["realpath"] = os.path.realpath(path).decode()
+        data["realpath"] = os.path.realpath(path)
         data["folder"] = os.path.isdir(data["realpath"])
         data["icon"] = "fa-link"
     elif stat.S_ISDIR(mode):
@@ -253,7 +253,7 @@ def as_dict(path, content=False):
         data["type"] = "block"
         data["icon"] = "fa-hdd-o"
     elif stat.S_ISREG(mode):
-        if name.endswith((b".tar", b".gz", b".tar.gz", b".tgz", b".bz2", b".tar.bz2", b".tbz2", b".zip")):
+        if name.endswith((".tar", ".gz", ".tar.gz", ".tgz", ".bz2", ".tar.bz2", ".tbz2", ".zip")):
             data["type"] = "archive"
         else:
             data["type"] = "file"
@@ -262,7 +262,26 @@ def as_dict(path, content=False):
         data["type"] = "unknown"
         data["icon"] = "fa-question-circle"
     try:
-        data["perms"] = {"oct": oct(stat.S_IMODE(mode)), "str": str_fperms(mode)}
+        permstr = str_fperms(mode)
+        data["perms"] = {
+            "oct": oct(stat.S_IMODE(mode)),
+            "str": permstr,
+            "user": {
+                "read": permstr[0] == "r",
+                "write": permstr[1] == "w",
+                "execute": permstr[2] == "x"
+            },
+            "group": {
+                "read": permstr[3] == "r",
+                "write": permstr[4] == "w",
+                "execute": permstr[5] == "x"
+            },
+            "all": {
+                "read": permstr[6] == "r",
+                "write": permstr[7] == "w",
+                "execute": permstr[8] == "x"
+            }
+        }
         data["size"] = fstat[stat.ST_SIZE]
     except:
         return
@@ -275,24 +294,22 @@ def as_dict(path, content=False):
     except:
         data["group"] = str(fstat[stat.ST_GID])
     if data["type"] == "file":
-        tc = "".join(map(chr, [7,8,9,10,12,13,27] + list(range(0x20, 0x100))))
-        ibs = lambda b: bool(b.translate(None, tc))
-        with open(path, 'r') as f:
+        with open(path, 'rb') as f:
             try:
-                data["binary"] = ibs(f.read(1024))
+                data["binary"] = is_binary(f.read(1024))
             except:
                 data["binary"] = True
     else:
         data["binary"] = False
-    data["mimetype"] = mimetypes.guess_type(path.decode())[0]
+    data["mimetype"] = mimetypes.guess_type(path)[0]
     data["selected"] = False
     if content:
-        with open(path, "r") as f:
+        with open(path, "rb") as f:
             data["content"] = f.read().decode()
     return data
 
+
 def guess_file_icon(name):
-    name = name.decode()
     if name.endswith((".xls", ".xlsx", ".ods")):
         return "fa-file-excel-o"
     elif name.endswith((".mp3", ".wav", ".flac", ".ogg", ".m4a", ".wma", ".aac")):
