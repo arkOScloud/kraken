@@ -43,7 +43,7 @@ class WebsitesAPI(MethodView):
         nthread = NotificationThread(id=job.id)
         sapp = applications.get(data["site_type"])
         site = sapp._website
-        site = site(data["id"], data["addr"], data["port"])
+        site = site(data["id"], data["domain"], data["port"])
         try:
             specialmsg = site.install(sapp, data["extra_data"], True, nthread)
             if specialmsg:
@@ -71,7 +71,7 @@ class WebsitesAPI(MethodView):
         elif data.get("operation") == "update":
             site.update()
         else:
-            site.addr = data["addr"]
+            site.domain = data["domain"]
             site.port = data["port"]
             site.edit(data.get("new_name"))
         push_record("website", site.serialized)
