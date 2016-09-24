@@ -27,10 +27,15 @@ class ApplicationsAPI(MethodView):
     def get(self, id):
         if request.args.get("rescan", None):
             applications.scan()
+        installed = request.args.get("installed", None)
+        if installed and installed.lower() == "true":
+            installed = True
+        elif installed and installed.lower() == "false":
+            installed = False
         apps = applications.get(
             id, type=request.args.get("type", None),
             loadable=request.args.get("loadable", None),
-            installed=request.args.get("installed", None),
+            installed=installed,
             cry=False)
         if id and not apps:
             abort(404)
