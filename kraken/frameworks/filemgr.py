@@ -236,31 +236,31 @@ def as_dict(path, content=False):
     if os.path.ismount(path):
         data["type"] = "mount"
         data["folder"] = True
-        data["icon"] = "fa-hdd-o"
+        data["icon"] = "disk outline"
     elif stat.S_ISLNK(mode):
         data["type"] = "link"
         data["realpath"] = os.path.realpath(path)
         data["folder"] = os.path.isdir(data["realpath"])
-        data["icon"] = "fa-link"
+        data["icon"] = "link"
     elif stat.S_ISDIR(mode):
         data["type"] = "folder"
         data["folder"] = True
-        data["icon"] = "fa-folder-o"
+        data["icon"] = "folder outline"
     elif stat.S_ISSOCK(mode):
         data["type"] = "socket"
-        data["icon"] = "fa-plug"
+        data["icon"] = "plug"
     elif stat.S_ISBLK(mode):
         data["type"] = "block"
-        data["icon"] = "fa-hdd-o"
+        data["icon"] = "disk outline"
     elif stat.S_ISREG(mode):
         if name.endswith((".tar", ".gz", ".tar.gz", ".tgz", ".bz2", ".tar.bz2", ".tbz2", ".zip")):
             data["type"] = "archive"
         else:
             data["type"] = "file"
-        data["icon"] = guess_file_icon(name)
+        data["icon"] = guess_file_icon(name.lower())
     else:
         data["type"] = "unknown"
-        data["icon"] = "fa-question-circle"
+        data["icon"] = "question circle"
     try:
         permstr = str_fperms(mode)
         data["perms"] = {
@@ -311,25 +311,27 @@ def as_dict(path, content=False):
 
 def guess_file_icon(name):
     if name.endswith((".xls", ".xlsx", ".ods")):
-        return "fa-file-excel-o"
+        return "file excel outline"
     elif name.endswith((".mp3", ".wav", ".flac", ".ogg", ".m4a", ".wma", ".aac")):
-        return "fa-file-audio-o"
-    elif name.endswith((".mkv", ".avi", ".mov", ".wmv", ".mp4", ".m4v", ".mpg")):
-        return "fa-file-video-o"
+        return "file audio outline"
+    elif name.endswith((".mkv", ".avi", ".mov", ".wmv", ".mp4", ".m4v", ".mpg", ".gifv", ".webm")):
+        return "file video outline"
     elif name.endswith(".pdf"):
-        return "fa-file-pdf-o"
+        return "file pdf outline"
     elif name.endswith((".ppt", ".pptx", ".odp")):
-        return "fa-file-powerpoint-o"
+        return "file powerpoint outline"
     elif name.endswith((".jpg", ".jpeg", ".png", ".gif", ".tif", ".tiff", ".bmp")):
-        return "fa-file-image-o"
+        return "file image outline"
     elif name.endswith((".zip", ".tar", ".gz", ".bz2", ".rar", ".tgz", ".tbz2")):
-        return "fa-file-archive-o"
+        return "file archive outline"
     elif name.endswith((".doc", ".docx", ".odt")):
-        return "fa-file-word-o"
+        return "file word outline"
+    elif name.endswith((".txt", ".rtf", ".md", ".markdown")):
+        return "file text outline"
     elif name.endswith((".php", ".js", ".py", ".sh", ".html", ".xml", ".rb", ".css")):
-        return "fa-file-code-o"
+        return "file code outline"
     else:
-        return "fa-file-o"
+        return "file outline"
 
 
 filemgr_view = FileManagerAPI.as_view('filemgr_api')

@@ -134,7 +134,7 @@ def ssl_able():
                     "name": "arkOS Genesis/API"})
     for x in websites.get():
         assigns.append({"type": "website", "id": x.id,
-                        "name": x.id if x.meta else x.name})
+                        "name": x.id if x.app else x.name})
     for x in applications.get(installed=True):
         if x.type == "app" and x.uses_ssl:
             for y in x.get_ssl_able():
