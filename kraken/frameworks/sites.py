@@ -41,11 +41,11 @@ class WebsitesAPI(MethodView):
 
     def _post(self, job, data):
         nthread = NotificationThread(id=job.id)
-        sapp = applications.get(data["site_type"])
+        sapp = applications.get(data["app"])
         site = sapp._website
-        site = site(data["id"], data["domain"], data["port"])
+        site = site(sapp, data["id"], data["domain"], data["port"])
         try:
-            specialmsg = site.install(sapp, data["extra_data"], True, nthread)
+            specialmsg = site.install(data["extra_data"], True, nthread)
             if specialmsg:
                 Notification("info", "Websites", specialmsg).send()
             push_record("website", site.serialized)
