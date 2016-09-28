@@ -16,13 +16,13 @@ import stat
 
 from arkos import shared_files
 from arkos.system import users, groups
-from arkos.utilities import b, is_binary, b64_to_path, path_to_b64, compress, extract, str_fperms, random_string
+from arkos.utilities import is_binary, b64_to_path, path_to_b64, compress, extract, str_fperms, random_string
 
 from kraken import auth
 from werkzeug import secure_filename
 from flask import Response, Blueprint, jsonify, request, abort
 from flask.views import MethodView
-from kraken.messages import remove_record
+from kraken.records import remove_record
 
 backend = Blueprint("filemgr", __name__)
 

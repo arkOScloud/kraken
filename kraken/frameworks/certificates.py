@@ -14,7 +14,7 @@ from arkos import certificates, websites, applications
 from arkos.messages import NotificationThread
 
 from kraken import auth
-from kraken.messages import push_record
+from kraken.records import push_record
 from kraken.jobs import as_job, job_response
 
 backend = Blueprint("certs", __name__)

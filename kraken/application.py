@@ -7,24 +7,40 @@ Written by Jacob Cook
 Licensed under GPLv3, see LICENSE.md
 """
 
+import eventlet
 import logging
 import ssl
 
-from kraken import auth, genesis, messages
+from kraken import auth, genesis
 
 import arkos
 from arkos import logger
-from arkos.utilities import *
+from arkos.utilities import random_string, detect_platform, NotificationFilter
 
-from kraken.messages import APIHandler
+from kraken.redis_storage import storage
+from kraken.logging import APIHandler
 from kraken.utilities import add_cors_to_response, make_json_error
 from kraken.framework import register_frameworks
 
 from flask import Flask
+from flask_socketio import SocketIO
 from werkzeug.exceptions import default_exceptions
-
+import json
 
 app = Flask(__name__)
+socketio = SocketIO(app, logger=True)
+
+
+def handle_pubsub(ps, sio):
+    while True:
+        msg = ps.get_message()
+        if msg and msg["channel"] == b"arkos:notifications":
+            sio.emit("sendNotification", json.loads(msg["data"].decode()))
+        elif msg and msg["channel"] == b"arkos:records:push":
+            sio.emit("modelPush", json.loads(msg["data"].decode()))
+        elif msg and msg["channel"] == b"arkos:records:purge":
+            sio.emit("modelPurge", json.loads(msg["data"].decode()))
+        eventlet.sleep(0.1)
 
 
 def run_daemon(environment, log_level, config_file, secrets_file,
@@ -59,7 +75,6 @@ def run_daemon(environment, log_level, config_file, secrets_file,
         app.register_error_handler(code, make_json_error)
 
     app.register_blueprint(auth.backend)
-    app.register_blueprint(messages.backend)
 
     logger.info("Init", "Loading applications and scanning system...")
     arkos.initial_scans()
@@ -80,16 +95,24 @@ def run_daemon(environment, log_level, config_file, secrets_file,
     app.after_request(add_cors_to_response)
     logger.info("Init", "Server is up and ready")
     try:
+        import eventlet
+        pubsub = storage.redis.pubsub(ignore_subscribe_messages=True)
+        pubsub.subscribe(["arkos:notifications", "arkos:records:push",
+                          "arkos:records:purge"])
+        eventlet.spawn(handle_pubsub, pubsub, socketio)
+        eventlet_socket = eventlet.listen(
+            (app.conf.get("genesis", "host"), app.conf.get("genesis", "port"))
+        )
         if app.conf.get("genesis", "ssl", False):
             sslctx = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
             sslctx.load_cert_chain(app.conf.get("genesis", "cert_file"),
                                    app.conf.get("genesis", "cert_key"))
-            app.run(host=app.conf.get("genesis", "host"),
-                    port=app.conf.get("genesis", "port"),
-                    ssl_context=sslctx)
+            socketio.run(app=app,
+                         host=app.conf.get("genesis", "host"),
+                         port=app.conf.get("genesis", "port"),
+                         ssl_context=sslctx)
         else:
-            app.run(host=app.conf.get("genesis", "host"),
-                    port=app.conf.get("genesis", "port"))
+            eventlet.wsgi.server(eventlet_socket, app)
     except KeyboardInterrupt:
         logger.info("Init", "Received interrupt")
         raise

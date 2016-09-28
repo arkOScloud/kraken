@@ -16,7 +16,7 @@ from arkos.messages import Notification, NotificationThread
 
 from kraken import auth
 from kraken.jobs import as_job, job_response
-from kraken.messages import push_record
+from kraken.records import push_record
 
 backend = Blueprint("packages", __name__)
 

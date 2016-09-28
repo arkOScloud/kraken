@@ -132,6 +132,20 @@ class Storage:
             values.append(self._get(x))
         return values
 
+    def prepend(self, key, value, pipe=None):
+        """
+        Prepend a value to a list.
+
+        :param str key: Key name
+        :param value: Value to push to list
+        :param pipe: Pipe to queue operations on
+        """
+        self.check()
+        r = pipe or self.redis
+        if type(value) in [list, dict]:
+            value = json.dumps(value)
+        r.lpush("arkos:{0}".format(key), value)
+
     def append(self, key, value, pipe=None):
         """
         Append a value to a list.
@@ -266,7 +280,24 @@ class Storage:
         :param str key: Key name pattern
         :returns: List of key names
         """
-        return self.redis.scan(0, "arkos:{0}".format(key))[1]
+        data = self.redis.scan(0, "arkos:{0}".format(key))[1]
+        return [x.decode() for x in data]
+
+    def publish(self, channel, data=None, pipe=None):
+        """
+        Publish data to a publish/subscribe channel.
+
+        :param str channel: Channel name to publish to
+        :param value: Data to publish to the channel
+        """
+        self.check()
+        r = pipe or self.redis
+        if data:
+            if type(data) in [list, dict]:
+                data = json.dumps(data)
+            r.publish("arkos:{0}".format(channel), data)
+        else:
+            r.publish("arkos:{0}".format(channel))
 
     def pipeline(self):
         """Create a set of Redis commands."""

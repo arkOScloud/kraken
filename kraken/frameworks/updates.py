@@ -14,7 +14,7 @@ from arkos import logger, storage, updates
 from arkos.messages import NotificationThread
 
 from kraken import auth
-from kraken.messages import remove_record
+from kraken.records import remove_record
 from kraken.jobs import as_job, job_response
 
 backend = Blueprint("updates", __name__)

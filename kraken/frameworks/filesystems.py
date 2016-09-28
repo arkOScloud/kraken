@@ -14,7 +14,7 @@ from arkos.messages import Notification, NotificationThread
 from arkos.system import filesystems
 
 from kraken import auth
-from kraken.messages import push_record
+from kraken.records import push_record
 from kraken.jobs import as_job, job_response
 
 backend = Blueprint("filesystems", __name__)
