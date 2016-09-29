@@ -14,7 +14,7 @@ from arkos import certificates, websites, applications
 from arkos.messages import NotificationThread
 
 from kraken import auth
-from kraken.records import push_record
+from kraken.records import push_record, remove_record
 from kraken.jobs import as_job, job_response
 
 backend = Blueprint("certs", __name__)
@@ -54,17 +54,27 @@ class CertificatesAPI(MethodView):
 
     def _generate(self, job, data):
         nthread = NotificationThread(id=job.id)
-        cert = certificates.generate_certificate(
-            data["id"], data["domain"], data["country"], data["state"],
-            data["locale"], data["email"], data["keytype"],
-            data["keylength"], nthread)
-        push_record("certificates", cert.serialized)
+        try:
+            cert = certificates.generate_certificate(
+                data["id"], data["domain"], data["country"], data["state"],
+                data["locale"], data["email"], data["keytype"],
+                data["keylength"], nthread=nthread)
+        except:
+            remove_record("certificate", data["id"])
+            raise
+        try:
+            basehost = ".".join(data["domain"].split(".")[-2:])
+            ca = certificates.get_authorities(basehost)
+            push_record("authority", ca.serialized)
+        except:
+            pass
+        push_record("certificate", cert.serialized)
 
     def _upload(self, job, name, files):
         nthread = NotificationThread(id=job.id)
         cert = certificates.upload_certificate(
             name, files[0], files[1], files[2], nthread)
-        push_record("certificates", cert.serialized)
+        push_record("certificate", cert.serialized)
 
     @auth.required()
     def put(self, id):
@@ -77,15 +87,14 @@ class CertificatesAPI(MethodView):
             for y in data["assigns"]:
                 if y in x.assigns:
                     x.unassign(y)
-                    push_record("certificates", x.serialized)
+                    push_record("certificate", x.serialized)
         for x in cert.assigns:
             if x not in data["assigns"]:
                 cert.unassign(x)
         for x in data["assigns"]:
             if x not in cert.assigns:
                 cert.assign(x)
-        return jsonify(certificate=cert.serialized,
-                       message="Certificate updated successfully")
+        return jsonify(certificate=cert.serialized)
 
     @auth.required()
     def delete(self, id):
