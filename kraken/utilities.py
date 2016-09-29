@@ -45,7 +45,7 @@ def make_json_error(err):
         report = "arkOS {0} Crash Report\n".format(version)
         report += "--------------------\n\n"
         report += "Running in {0}\n".format(config.get("enviro", "run"))
-        report += "System: {0}\n".format(shell("uname -a")["stdout"])
+        report += "System: {0}\n".format(shell("uname -a")["stdout"].decode())
         report += "Platform: {0} {1}\n".format(config.get("enviro", "arch"),
                                                config.get("enviro", "board"))
         report += "Python version {0}\n".format('.'.join(pyver))
@@ -53,12 +53,12 @@ def make_json_error(err):
         report += "Loaded applicatons: \n{0}\n\n".format("\n".join(apps))
         report += "Request: {0} {1}\n\n".format(request.method, request.path)
         report += stacktrace
-        response = jsonify(message=message, stacktrace=stacktrace,
-                           report=report, version=version,
-                           arch=config.get("enviro", "arch"))
+        response = jsonify(errors={"msg": message, "stack": stacktrace,
+                           "report": report, "version": version,
+                           "arch": config.get("enviro", "arch")})
         logger.critical("Unknown", stacktrace)
     else:
-        response = jsonify(message=message)
+        response = jsonify(errors={"msg": message})
     response.status_code = err.code if isinstance(err, HTTPException) else 500
     return add_cors_to_response(response)
 

@@ -11,7 +11,7 @@ from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
 from kraken import auth
-from arkos import databases
+from arkos import databases, logger
 
 backend = Blueprint("databases", __name__)
 
@@ -46,10 +46,9 @@ class DatabasesAPI(MethodView):
         try:
             db = manager.add_db(data["id"])
         except Exception as e:
-            resp = jsonify(message="Database couldn't be added: {0}".format(str(e)))
-            resp.status_code = 422
-            return resp
-        return jsonify(database=db.serialized, message="Database {0} added successfully".format(str(db.id)))
+            logger.error("Databases", str(e))
+            return jsonify(errors={"msg": str(e)}), 500
+        return jsonify(database=db.serialized)
 
     @auth.required()
     def put(self, id):
@@ -73,9 +72,8 @@ class DatabasesAPI(MethodView):
         try:
             db.remove()
         except Exception as e:
-            resp = jsonify(message="Database couldn't be deleted: {0}".format(str(e)))
-            resp.status_code = 422
-            return resp
+            logger.error("Databases", str(e))
+            return jsonify(errors={"msg": str(e)}), 500
         return Response(status=204)
 
 
@@ -103,10 +101,9 @@ class DatabaseUsersAPI(MethodView):
         try:
             u = manager.add_user(data["id"], data["passwd"])
         except Exception as e:
-            resp = jsonify(message="Database user couldn't be added: {0}".format(str(e)))
-            resp.status_code = 422
-            return resp
-        return jsonify(database_user=u.serialized, message="Database user {0} added successfully".format(u.id))
+            logger.error("Databases", str(e))
+            return jsonify(errors={"msg": str(e)}), 500
+        return jsonify(database_user=u.serialized)
 
     @auth.required()
     def put(self, id):
@@ -127,9 +124,8 @@ class DatabaseUsersAPI(MethodView):
         try:
             u.remove()
         except Exception as e:
-            resp = jsonify(message="Database user couldn't be deleted: {0}".format(str(e)))
-            resp.status_code = 422
-            return resp
+            logger.error("Databases", str(e))
+            return jsonify(errors={"msg": str(e)}), 500
         return Response(status=204)
 
 

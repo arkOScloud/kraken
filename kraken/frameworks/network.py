@@ -11,6 +11,7 @@ from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
 from kraken import auth
+from arkos import logger
 from arkos.system import network
 
 backend = Blueprint("networks", __name__)
@@ -53,9 +54,8 @@ class NetworksAPI(MethodView):
                 else:
                     abort(422)
             except Exception as e:
-                resp = jsonify(message=str(e))
-                resp.status_code = 500
-                return resp
+                logger.error("Network", str(e))
+                return jsonify(errors={"msg": str(e)}), 500
         else:
             net.config = data["config"]
             net.update()

@@ -72,7 +72,7 @@ class SSHKeysAPI(MethodView):
                     f.write("\n")
                 f.seek(0)
                 key["id"] = key["user"]+"-"+data["key"].split()[1][:10]
-        return jsonify(ssh_key=key, message="SSH key for {0} added successfully".format(data["user"]))
+        return jsonify(ssh_key=key)
 
     @auth.required()
     def delete(self, id):

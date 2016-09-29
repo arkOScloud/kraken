@@ -28,7 +28,7 @@ from werkzeug.exceptions import default_exceptions
 import json
 
 app = Flask(__name__)
-socketio = SocketIO(app, logger=True)
+socketio = SocketIO(app)
 
 
 def handle_pubsub(ps, sio):
@@ -57,13 +57,13 @@ def run_daemon(environment, log_level, config_file, secrets_file,
     logger.info("Init", "Using config file at {0}".format(config.filename))
     app.conf = config
 
-    arch = app.conf.get("enviro", "arch", "Unknown")
-    board = app.conf.get("enviro", "board", "Unknown")
+    arch = config.get("enviro", "arch", "Unknown")
+    board = config.get("enviro", "board", "Unknown")
     platform = detect_platform()
     hwstr = "Detected architecture/hardware: {0}, {1}"
     logger.info("Init", hwstr.format(arch, board))
     logger.info("Init", "Detected platform: {0}".format(platform))
-    app.conf.set("enviro", "run", environment)
+    config.set("enviro", "run", environment)
     logger.info("Init", "Environment: {0}".format(environment))
 
     apihdlr = APIHandler()
@@ -101,18 +101,14 @@ def run_daemon(environment, log_level, config_file, secrets_file,
                           "arkos:records:purge"])
         eventlet.spawn(handle_pubsub, pubsub, socketio)
         eventlet_socket = eventlet.listen(
-            (app.conf.get("genesis", "host"), app.conf.get("genesis", "port"))
+            (config.get("genesis", "host"), config.get("genesis", "port"))
         )
-        if app.conf.get("genesis", "ssl", False):
-            sslctx = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
-            sslctx.load_cert_chain(app.conf.get("genesis", "cert_file"),
-                                   app.conf.get("genesis", "cert_key"))
-            socketio.run(app=app,
-                         host=app.conf.get("genesis", "host"),
-                         port=app.conf.get("genesis", "port"),
-                         ssl_context=sslctx)
-        else:
-            eventlet.wsgi.server(eventlet_socket, app)
+        if config.get("genesis", "ssl", False):
+            eventlet_socket = eventlet.wrap_ssl(
+                eventlet_socket, certfile=config.get("genesis", "cert_file"),
+                keyfile=config.get("genesis", "cert_key"),
+                ssl_version=ssl.PROTOCOL_TLSv1_2, server_side=True)
+        eventlet.wsgi.server(eventlet_socket, app)
     except KeyboardInterrupt:
         logger.info("Init", "Received interrupt")
         raise

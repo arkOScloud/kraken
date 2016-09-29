@@ -10,6 +10,7 @@ Licensed under GPLv3, see LICENSE.md
 from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
+from arkos import logger
 from arkos.messages import Notification, NotificationThread
 from arkos.system import filesystems
 
@@ -61,7 +62,6 @@ class DisksAPI(MethodView):
             abort(404)
         try:
             if data["operation"] == "mount":
-                op = "mounted"
                 if disk.mountpoint:
                     abort(400)
                 elif disk.crypt and not data.get("passwd"):
@@ -70,20 +70,15 @@ class DisksAPI(MethodView):
                     disk.mountpoint = data["mountpoint"]
                 disk.mount(data.get("passwd"))
             elif data["operation"] == "umount":
-                op = "unmounted"
                 disk.umount()
             elif data["operation"] == "enable":
-                op = "enabled"
                 disk.enable()
             elif data["operation"] == "disable":
-                op = "disabled"
                 disk.disable()
         except Exception as e:
-            resp = jsonify(message="Operation failed: {0}".format(str(e)))
-            resp.status_code = 422
-            return resp
-        return jsonify(filesystem=disk.serialized,
-                       message="Disk {0} successfully".format(op))
+            logger.error("Filesystems", str(e))
+            return jsonify(errors={"msg": str(e)}), 500
+        return jsonify(filesystem=disk.serialized)
 
     @auth.required()
     def delete(self, id):

@@ -10,7 +10,7 @@ Licensed under GPLv3, see LICENSE.md
 from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
-from arkos import applications, certificates, websites
+from arkos import applications, certificates, websites, logger
 from arkos.messages import Notification, NotificationThread
 
 from kraken import auth
@@ -76,7 +76,7 @@ class WebsitesAPI(MethodView):
             site.edit(data.get("new_name"))
         push_record("website", site.serialized)
         remove_record("website", id)
-        return jsonify(message="Site edited successfully")
+        return jsonify(website=site.serialized)
 
     @auth.required()
     def delete(self, id):
@@ -104,9 +104,8 @@ def perform_action(id, action):
     try:
         actionfunc()
     except Exception as e:
-        resp = jsonify(message=str(e))
-        resp.status_code = 500
-        return resp
+        logger.error("Websites", str(e))
+        return jsonify(errors={"msg": str(e)}), 500
     finally:
         return Response(status=200)
 

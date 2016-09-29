@@ -14,7 +14,7 @@ import pwd
 import shutil
 import stat
 
-from arkos import shared_files
+from arkos import shared_files, logger
 from arkos.system import users, groups
 from arkos.utilities import is_binary, b64_to_path, path_to_b64, compress, extract, str_fperms, random_string
 
@@ -47,9 +47,7 @@ class FileManagerAPI(MethodView):
         if not os.path.exists(path):
             abort(404)
         if not os.path.isdir(path):
-            resp = jsonify(message="Can only upload into folders")
-            resp.status_code = 422
-            return resp
+            return jsonify(errors={"msg": "Can only upload into folders"}), 422
         if request.headers.get('Content-Type').startswith("multipart/form-data"):
             results = []
             f = request.files
@@ -63,9 +61,7 @@ class FileManagerAPI(MethodView):
             if not os.path.exists(path):
                 abort(404)
             if not os.path.isdir(path):
-                resp = jsonify(message="Can only create into folders")
-                resp.status_code = 422
-                return resp
+                return jsonify(errors={"msg": "Can only create into folders"}), 422
             if data["folder"]:
                 os.makedirs(os.path.join(path, data["name"]))
             else:
@@ -95,9 +91,7 @@ class FileManagerAPI(MethodView):
             return jsonify(file=as_dict(data["path"]))
         elif data["operation"] == "extract":
             if not orig["type"] == "archive":
-                resp = jsonify(message="Not an archive")
-                resp.status_code = 422
-                return resp
+                return jsonify(errors={"msg": "Not an archive"}), 422
             extract(data["path"], os.path.dirname(data["path"]))
             return jsonify(file=as_dict(data["path"]))
         elif data["operation"] == "props":
@@ -111,9 +105,7 @@ class FileManagerAPI(MethodView):
                 if u and g:
                     uid, gid = u.uid, g.gid
                 if uid == None or gid == None:
-                    resp = jsonify(message="Invalid user/group specification")
-                    resp.status_code = 422
-                    return resp
+                    return jsonify(errors={"msg": "Invalid user/group specification"}), 422
                 if data["folder"]:
                     os.chown(data["path"], uid, gid)
                     for r, d, f in os.walk(data["path"]):
@@ -201,9 +193,7 @@ def download(id):
         abort(404)
     if item.is_expired:
         item.delete()
-        resp = jsonify(message="The requested item has expired")
-        resp.status_code = 410
-        return resp
+        return jsonify(errors={"msg": "The requested item has expired"}), 410
     if item.expires == 0:
         item.delete()
         remove_record("share", item.id)

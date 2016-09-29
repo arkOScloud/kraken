@@ -61,9 +61,7 @@ class ApplicationsAPI(MethodView):
                 return resp
             id = as_job(self._uninstall, app)
         else:
-            resp = jsonify(message="Unknown operation specified")
-            resp.status_code = 422
-            return resp
+            return jsonify(errors={"msg": "Unknown operation"}), 422
         data = app.serialized
         data["is_ready"] = False
         return job_response(id, {"app": data})
