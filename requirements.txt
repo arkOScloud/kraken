@@ -1,4 +1,6 @@
 cryptography
+eventlet
 flask
+flask_socketio
 itsdangerous
 redis
