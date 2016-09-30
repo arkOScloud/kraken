@@ -38,8 +38,20 @@ class CertificatesAPI(MethodView):
         head = request.headers
         if head.get('Content-Type').startswith("application/json"):
             data = request.get_json()["certificate"]
-            id = as_job(self._generate, data)
-            return job_response(id, data={"certificate": {"id": data["id"]}})
+            if data.get("is_acme"):
+                certs = certificates.get()
+                for x in certs:
+                    if x.domain == data["domain"] and x.is_acme:
+                        emsg = ("You can only have one ACME certificate at a "
+                                "time for this domain.")
+                        return jsonify(errors={"msg": emsg}), 422
+                id = as_job(self._request_acme, data)
+                return job_response(
+                    id, data={"certificate": {"id": data["id"]}})
+            else:
+                id = as_job(self._generate, data)
+                return job_response(
+                    id, data={"certificate": {"id": data["id"]}})
         elif head.get('Content-Type').startswith("multipart/form-data"):
             name = request.form.get("id")
             files = [
@@ -52,6 +64,25 @@ class CertificatesAPI(MethodView):
         else:
             abort(400)
 
+    def _request_acme(self, job, data):
+        nthread = NotificationThread(id=job.id)
+        try:
+            sroot = ""
+            sites = websites.get()
+            for x in sites:
+                if x.domain == data["domain"]:
+                    sroot = x.add_acme_challenge()
+                    break
+            else:
+                sroot = websites.create_acme_dummy(data["domain"])
+            cert = certificates.request_acme_certificate(
+                data["domain"], sroot, nthread=nthread)
+        except:
+            remove_record("certificate", data["id"])
+            raise
+        else:
+            push_record("certificate", cert.serialized)
+
     def _generate(self, job, data):
         nthread = NotificationThread(id=job.id)
         try:
@@ -62,13 +93,15 @@ class CertificatesAPI(MethodView):
         except:
             remove_record("certificate", data["id"])
             raise
+        else:
+            push_record("certificate", cert.serialized)
         try:
             basehost = ".".join(data["domain"].split(".")[-2:])
             ca = certificates.get_authorities(basehost)
-            push_record("authority", ca.serialized)
         except:
             pass
-        push_record("certificate", cert.serialized)
+        else:
+            push_record("authority", ca.serialized)
 
     def _upload(self, job, name, files):
         nthread = NotificationThread(id=job.id)
