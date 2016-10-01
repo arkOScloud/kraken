@@ -67,16 +67,8 @@ class CertificatesAPI(MethodView):
     def _request_acme(self, job, data):
         nthread = NotificationThread(id=job.id)
         try:
-            sroot = ""
-            sites = websites.get()
-            for x in sites:
-                if x.domain == data["domain"]:
-                    sroot = x.add_acme_challenge()
-                    break
-            else:
-                sroot = websites.create_acme_dummy(data["domain"])
             cert = certificates.request_acme_certificate(
-                data["domain"], sroot, nthread=nthread)
+                data["domain"], nthread=nthread)
         except:
             remove_record("certificate", data["id"])
             raise
