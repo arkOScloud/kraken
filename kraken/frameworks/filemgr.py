@@ -14,7 +14,7 @@ import pwd
 import shutil
 import stat
 
-from arkos import shared_files, logger
+from arkos import shared_files
 from arkos.system import users, groups
 from arkos.utilities import is_binary, b64_to_path, path_to_b64, compress, extract, str_fperms, random_string
 
@@ -231,7 +231,7 @@ def as_dict(path, content=False):
         data["type"] = "link"
         data["realpath"] = os.path.realpath(path)
         data["folder"] = os.path.isdir(data["realpath"])
-        data["icon"] = "link"
+        data["icon"] = "chain"
     elif stat.S_ISDIR(mode):
         data["type"] = "folder"
         data["folder"] = True
@@ -328,8 +328,8 @@ filemgr_view = FileManagerAPI.as_view('filemgr_api')
 backend.add_url_rule('/api/files/<string:path>', view_func=filemgr_view,
     methods=['GET', 'POST', 'PUT', 'DELETE'])
 shares_view = SharingAPI.as_view('sharing_api')
-backend.add_url_rule('/api/shares', defaults={"id": None}, view_func=shares_view,
+backend.add_url_rule('/api/shared_files', defaults={"id": None}, view_func=shares_view,
     methods=['GET',])
-backend.add_url_rule('/api/shares', view_func=shares_view, methods=['POST',])
-backend.add_url_rule('/api/shares/<string:id>', view_func=shares_view,
+backend.add_url_rule('/api/shared_files', view_func=shares_view, methods=['POST',])
+backend.add_url_rule('/api/shared_files/<string:id>', view_func=shares_view,
     methods=['GET', 'PUT', 'DELETE'])

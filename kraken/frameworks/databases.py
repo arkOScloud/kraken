@@ -12,6 +12,7 @@ from flask.views import MethodView
 
 from kraken import auth
 from arkos import databases, logger
+from arkos.utilities import errors
 
 backend = Blueprint("databases", __name__)
 
@@ -45,9 +46,9 @@ class DatabasesAPI(MethodView):
         manager = databases.get_managers(data["database_type"])
         try:
             db = manager.add_db(data["id"])
-        except Exception as e:
+        except errors.InvalidConfigError as e:
             logger.error("Databases", str(e))
-            return jsonify(errors={"msg": str(e)}), 500
+            return jsonify(errors={"msg": str(e)}), 422
         return jsonify(database=db.serialized)
 
     @auth.required()
@@ -71,9 +72,9 @@ class DatabasesAPI(MethodView):
             abort(404)
         try:
             db.remove()
-        except Exception as e:
+        except errors.InvalidConfigError as e:
             logger.error("Databases", str(e))
-            return jsonify(errors={"msg": str(e)}), 500
+            return jsonify(errors={"msg": str(e)}), 422
         return Response(status=204)
 
 
@@ -100,9 +101,9 @@ class DatabaseUsersAPI(MethodView):
         manager = databases.get_managers(data["database_type"])
         try:
             u = manager.add_user(data["id"], data["passwd"])
-        except Exception as e:
+        except errors.InvalidConfigError as e:
             logger.error("Databases", str(e))
-            return jsonify(errors={"msg": str(e)}), 500
+            return jsonify(errors={"msg": str(e)}), 422
         return jsonify(database_user=u.serialized)
 
     @auth.required()
@@ -123,9 +124,9 @@ class DatabaseUsersAPI(MethodView):
             abort(404)
         try:
             u.remove()
-        except Exception as e:
+        except errors.InvalidConfigError as e:
             logger.error("Databases", str(e))
-            return jsonify(errors={"msg": str(e)}), 500
+            return jsonify(errors={"msg": str(e)}), 422
         return Response(status=204)
 
 
