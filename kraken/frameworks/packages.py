@@ -52,11 +52,21 @@ class PackagesAPI(MethodView):
             try:
                 pacman.refresh()
                 prereqs = pacman.needs_for(install)
-                title = "Installing {0} package(s)".format(len(prereqs))
-                msg = Notification("info", "Packages", ", ".join(prereqs))
-                nthread = NotificationThread(
-                    id=job.id, title=title, message=msg)
-                pacman.install(install)
+                upgr = (x["id"] for x in pacman.get_installed()
+                        if x.get("upgradable"))
+                if sorted(upgr) == sorted(install):
+                    # Upgrade
+                    msg = "Performing system upgrade..."
+                    msg = Notification("info", "Packages", msg)
+                    nthread = NotificationThread(id=job.id, message=msg)
+                    pacman.upgrade()
+                else:
+                    # Install
+                    title = "Installing {0} package(s)".format(len(prereqs))
+                    msg = Notification("info", "Packages", ", ".join(prereqs))
+                    nthread = NotificationThread(
+                        id=job.id, title=title, message=msg)
+                    pacman.install(install)
                 for x in prereqs:
                     try:
                         info = process_info(pacman.get_info(x))

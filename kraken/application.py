@@ -84,13 +84,14 @@ def run_daemon(environment, log_level, config_file, secrets_file,
     register_frameworks(app)
 
     logger.info("Init", "Initializing Genesis (if present)...")
-    genesis.DEBUG = app.debug
+    app.register_blueprint(genesis.backend)
     try:
-        app.register_blueprint(genesis.backend)
+        genesis.backend.verify_genesis()
     except:
-        errmsg = ("Genesis failed to build. Kraken will finish loading"
-                  " but you may not be able to access the Web interface.")
-        logger.error("Init", errmsg)
+        errmsg = ("A compiled distribution of Genesis was not found. "
+                  "Kraken will finish loading but you may not be able to "
+                  "access the Web interface.")
+        logger.warning("Init", errmsg)
 
     app.after_request(add_cors_to_response)
     logger.info("Init", "Server is up and ready")
