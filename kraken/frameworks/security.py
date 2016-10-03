@@ -28,6 +28,16 @@ class PolicyAPI(MethodView):
             return jsonify(policy=svcs.serialized)
 
     @auth.required()
+    def post(self):
+        data = request.get_json()["policy"]
+        pol = tracked_services.SecurityPolicy(
+            "custom", data["id"], data["name"], "shield", data["ports"],
+            data["policy"]
+        )
+        pol.save()
+        return jsonify(policy=pol.serialized)
+
+    @auth.required()
     def put(self, id):
         data = request.get_json()["policy"]
         policy = tracked_services.get(id)
@@ -36,6 +46,14 @@ class PolicyAPI(MethodView):
         policy.policy = data["policy"]
         policy.save()
         return jsonify(policy=policy.serialized)
+
+    @auth.required()
+    def delete(self, id):
+        policy = tracked_services.get(id)
+        if not id or not policy or policy.type != "custom":
+            abort(404)
+        policy.remove()
+        return jsonify(), 204
 
 
 class DefenceAPI(MethodView):
@@ -55,7 +73,9 @@ class DefenceAPI(MethodView):
 policy_view = PolicyAPI.as_view('policy_api')
 backend.add_url_rule('/api/system/policies', defaults={'id': None},
     view_func=policy_view, methods=['GET',])
-backend.add_url_rule('/api/system/policies/<string:id>', view_func=policy_view, methods=['GET', 'PUT'])
+backend.add_url_rule('/api/system/policies', view_func=policy_view,
+                     methods=['POST', ])
+backend.add_url_rule('/api/system/policies/<string:id>', view_func=policy_view, methods=['GET', 'PUT', 'DELETE'])
 
 defence_view = DefenceAPI.as_view('defence_api')
 backend.add_url_rule('/api/system/jails', defaults={'id': None},
