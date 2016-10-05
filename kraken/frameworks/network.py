@@ -23,10 +23,10 @@ class NetworksAPI(MethodView):
         nets = network.get_connections(id)
         if id and not nets:
             abort(404)
-        if type(nets) == list:
-            return jsonify(networks=[x.serialized for x in nets])
-        else:
+        if isinstance(nets, networks.Connection):
             return jsonify(network=nets.serialized)
+        else:
+            return jsonify(networks=[x.serialized for x in nets])
 
     @auth.required()
     def post(self):
@@ -77,10 +77,10 @@ def get_netifaces(id):
     ifaces = network.get_interfaces(id)
     if id and not ifaces:
         abort(404)
-    if type(ifaces) == list:
-        return jsonify(netifaces=[x.serialized for x in ifaces])
-    else:
+    if isinstance(ifaces, network.Interface):
         return jsonify(netiface=ifaces.serialized)
+    else:
+        return jsonify(netifaces=[x.serialized for x in ifaces])
 
 
 network_view = NetworksAPI.as_view('networks_api')

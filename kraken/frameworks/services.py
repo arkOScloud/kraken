@@ -33,10 +33,10 @@ class ServicesAPI(MethodView):
             return resp
         if id and not svcs:
             abort(404)
-        if type(svcs) == list:
-            return jsonify(services=[x.serialized for x in svcs if not any(y in x.name for y in ["systemd", "dbus"])])
-        else:
+        if isinstance(svcs, services.Service):
             return jsonify(service=svcs.serialized)
+        else:
+            return jsonify(services=[x.serialized for x in svcs if not any(y in x.name for y in ["systemd", "dbus"])])
 
     @auth.required()
     def post(self):

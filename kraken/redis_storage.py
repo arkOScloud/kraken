@@ -10,6 +10,7 @@ Licensed under GPLv3, see LICENSE.md
 import json
 import redis
 
+from arkos import config, secrets
 from arkos.utilities.errors import ConnectionError
 
 
@@ -23,7 +24,11 @@ class Storage:
     def connect(self):
         """Connect to Redis server."""
         try:
-            self.redis = redis.Redis(unix_socket_path="/tmp/arkos-redis.sock")
+            self.redis = redis.Redis(
+                db=config.get("genesis", "redis_db", 0),
+                port=config.get("genesis", "redis_port", 6380),
+                password=secrets.get("redis")
+            )
             self.redis.ping()
             self.redis.flushdb()
         except redis.exceptions.ConnectionError:

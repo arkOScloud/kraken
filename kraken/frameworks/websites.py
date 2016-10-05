@@ -28,10 +28,10 @@ class WebsitesAPI(MethodView):
         sites = websites.get(id)
         if id and not sites:
             abort(404)
-        if type(sites) == list:
-            return jsonify(websites=[x.serialized for x in sites])
-        else:
+        if isinstance(sites, websites.Site):
             return jsonify(website=sites.serialized)
+        else:
+            return jsonify(websites=[x.serialized for x in sites])
 
     @auth.required()
     def post(self):

@@ -31,14 +31,14 @@ class DatabasesAPI(MethodView):
             resp.headers["Content-Length"] = str(len(data.encode('utf-8')))
             resp.headers["Content-Disposition"] = "attachment; filename={0}.sql".format(id)
             return resp
-        if type(dbs) == list:
+        if isinstance(dbs, databases.Database):
+            return jsonify(database=dbs.serialized,
+                           database_type=dbs.manager.serialized)
+        else:
             db_types = (x.manager.serialized for x in dbs)
             db_types = list({v['id']: v for v in db_types}.values())
             return jsonify(databases=[x.serialized for x in dbs],
                            database_types=db_types)
-        else:
-            return jsonify(database=dbs.serialized,
-                           database_type=dbs.manager.serialized)
 
     @auth.required()
     def post(self):
@@ -83,17 +83,17 @@ class DatabaseUsersAPI(MethodView):
     def get(self, id):
         if request.args.get("rescan", None):
             databases.scan_users()
-        u = databases.get_user(id)
+        u = databases.get_users(id)
         if id and not u:
             abort(404)
-        if type(u) == list:
+        if isinstance(u, databases.DatabaseUser):
+            return jsonify(database_user=u.serialized,
+                           database_type=u.manager.serialized)
+        else:
             db_types = (x.manager.serialized for x in u)
             db_types = list({v['id']: v for v in db_types}.values())
             return jsonify(database_users=[x.serialized for x in u],
                            database_types=db_types)
-        else:
-            return jsonify(database_user=u.serialized,
-                           database_type=u.manager.serialized)
 
     @auth.required()
     def post(self):
@@ -109,7 +109,7 @@ class DatabaseUsersAPI(MethodView):
     @auth.required()
     def put(self, id):
         data = request.get_json()["database_user"]
-        u = databases.get_user(id)
+        u = databases.get_users(id)
         if not id or not u:
             abort(404)
         elif not data.get("operation"):
@@ -119,7 +119,7 @@ class DatabaseUsersAPI(MethodView):
 
     @auth.required()
     def delete(self, id):
-        u = databases.get_user(id)
+        u = databases.get_users(id)
         if not id or not u:
             abort(404)
         try:
@@ -133,9 +133,9 @@ class DatabaseUsersAPI(MethodView):
 @backend.route('/api/database_types')
 @auth.required()
 def list_types():
-    dbs = databases.get_managers()
     if request.args.get("rescan", None):
-        dbs = databases.scan_managers()
+        databases.scan_managers()
+    dbs = databases.get_managers()
     return jsonify(database_types=[x.serialized for x in dbs])
 
 

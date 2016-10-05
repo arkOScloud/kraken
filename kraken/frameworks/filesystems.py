@@ -27,10 +27,11 @@ class DisksAPI(MethodView):
         disks = filesystems.get(id)
         if id and not disks:
             abort(404)
-        if type(disks) == list:
-            return jsonify(filesystems=[x.serialized for x in disks])
-        else:
+        if isinstance(
+                disks, (filesystems.VirtualDisk, filesystems.DiskPartition)):
             return jsonify(filesystem=disks.serialized)
+        else:
+            return jsonify(filesystems=[x.serialized for x in disks])
 
     @auth.required()
     def post(self):

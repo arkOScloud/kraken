@@ -28,10 +28,10 @@ class CertificatesAPI(MethodView):
         certs = certificates.get(id)
         if id and not certs:
             abort(404)
-        if type(certs) == list:
-            return jsonify(certificates=[x.serialized for x in certs])
-        else:
+        if isinstance(certs, certificates.Certificate):
             return jsonify(certificate=certs.serialized)
+        else:
+            return jsonify(certificates=[x.serialized for x in certs])
 
     @auth.required()
     def post(self):
@@ -146,10 +146,10 @@ class CertificateAuthoritiesAPI(MethodView):
             aname = "attachment; filename={0}.pem".format(id)
             resp.headers["Content-Disposition"] = aname
             return resp
-        if type(certs) == list:
-            return jsonify(authorities=[x.serialized for x in certs])
-        else:
+        if isinstance(certs, certificates.CertificateAuthority):
             return jsonify(authority=certs.serialized)
+        else:
+            return jsonify(authorities=[x.serialized for x in certs])
 
     @auth.required()
     def delete(self, id):

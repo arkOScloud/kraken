@@ -39,10 +39,10 @@ class ApplicationsAPI(MethodView):
             cry=False)
         if id and not apps:
             abort(404)
-        if type(apps) == list:
-            return jsonify(apps=[x.serialized for x in apps])
-        else:
+        if isinstance(apps, applications.App):
             return jsonify(app=apps.serialized)
+        else:
+            return jsonify(apps=[x.serialized for x in apps])
 
     @auth.required()
     def put(self, id):

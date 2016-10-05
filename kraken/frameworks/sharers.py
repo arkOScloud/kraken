@@ -26,14 +26,14 @@ class SharesAPI(MethodView):
         shares = sharers.get_shares(id)
         if id and not shares:
             abort(404)
-        if type(shares) == list:
+        if isinstance(shares, sharers.Share):
+            return jsonify(shares=shares.serialized,
+                           share_types=shares.manager.serialized)
+        else:
             share_types = (x.manager.serialized for x in shares)
             share_types = list({v['id']: v for v in share_types}.values())
             return jsonify(shares=[x.serialized for x in shares],
                            share_types=share_types)
-        else:
-            return jsonify(shares=shares.serialized,
-                           share_types=shares.manager.serialized)
 
     @auth.required()
     def post(self):
@@ -70,14 +70,14 @@ class MountsAPI(MethodView):
         mounts = sharers.get_mounts(id)
         if id and not mounts:
             abort(404)
-        if type(mounts) == list:
+        if isinstance(mounts, sharers.Mount):
+            return jsonify(mounts=mounts.serialized,
+                           share_types=mounts.manager.serialized)
+        else:
             share_types = (x.manager.serialized for x in mounts)
             share_types = list({v['id']: v for v in share_types}.values())
             return jsonify(mounts=[x.serialized for x in mounts],
                            share_types=share_types)
-        else:
-            return jsonify(mounts=mounts.serialized,
-                           share_types=mounts.manager.serialized)
 
     @auth.required()
     def post(self):
@@ -109,9 +109,9 @@ class MountsAPI(MethodView):
 @backend.route('/api/share_types')
 @auth.required()
 def list_types():
-    managers = sharers.get_sharers()
     if request.args.get("rescan", None):
-        managers = sharers.scan_sharers()
+        sharers.scan_sharers()
+    managers = sharers.get_sharers()
     return jsonify(share_types=[x.serialized for x in managers])
 
 

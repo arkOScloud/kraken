@@ -39,7 +39,7 @@ def make_json_error(err):
     if (isinstance(err, HTTPException) and err.code == 500)\
             or not isinstance(err, HTTPException):
         pyver = [str(x) for x in platform.python_version_tuple()]
-        apps = arkos_storage.apps.get("applications")
+        apps = arkos_storage.applications.values()
         apps = [x.id for x in apps if x.installed]
         stacktrace = traceback.format_exc()
         report = "arkOS {0} Crash Report\n".format(version)

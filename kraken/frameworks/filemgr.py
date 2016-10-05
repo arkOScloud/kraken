@@ -152,10 +152,10 @@ class SharingAPI(MethodView):
         shares = shared_files.get(id)
         if id and not shares:
             abort(404)
-        if type(shares) == list:
-            return jsonify(shares=[x.serialized for x in shares])
-        else:
+        if isinstance(shares, shared_files.SharedFile):
             return jsonify(share=shares.serialized)
+        else:
+            return jsonify(shares=[x.serialized for x in shares])
 
     @auth.required()
     def post(self):

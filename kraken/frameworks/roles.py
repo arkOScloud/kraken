@@ -11,7 +11,6 @@ from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
 from kraken import auth
-from arkos import logger
 from arkos.system import users, groups, domains
 from arkos.utilities import errors
 
@@ -24,10 +23,10 @@ class UsersAPI(MethodView):
         u = users.get(id)
         if id and not u:
             abort(404)
-        if type(u) == list:
-            return jsonify(users=[x.serialized for x in u])
-        else:
+        if isinstance(u, users.User):
             return jsonify(user=u.serialized)
+        else:
+            return jsonify(users=[x.serialized for x in u])
 
     @auth.required()
     def post(self):
@@ -81,10 +80,10 @@ class GroupsAPI(MethodView):
         g = groups.get(id)
         if id and not g:
             abort(404)
-        if type(g) == list:
-            return jsonify(groups=[x.serialized for x in g])
-        else:
+        if isinstance(g, groups.Group):
             return jsonify(group=g.serialized)
+        else:
+            return jsonify(groups=[x.serialized for x in g])
 
     @auth.required()
     def post(self):
@@ -127,10 +126,10 @@ class DomainsAPI(MethodView):
         d = domains.get(id)
         if id and not d:
             abort(404)
-        if type(d) == list:
-            return jsonify(domains=[x.serialized for x in d])
-        else:
+        if isinstance(d, domains.Domain):
             return jsonify(domain=d.serialized)
+        else:
+            return jsonify(domains=[x.serialized for x in d])
 
     @auth.required()
     def post(self):

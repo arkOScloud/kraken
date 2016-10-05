@@ -22,10 +22,10 @@ class PolicyAPI(MethodView):
         svcs = tracked_services.get(id)
         if id and not svcs:
             abort(404)
-        if type(svcs) == list:
-            return jsonify(policies=[x.serialized for x in svcs])
-        else:
+        if isinstance(svcs, tracked_services.SecurityPolicy):
             return jsonify(policy=svcs.serialized)
+        else:
+            return jsonify(policies=[x.serialized for x in svcs])
 
     @auth.required()
     def post(self):
