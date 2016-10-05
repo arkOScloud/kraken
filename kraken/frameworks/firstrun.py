@@ -13,6 +13,7 @@ from flask import Blueprint, request, jsonify
 
 from kraken import auth
 from kraken.jobs import as_job
+from kraken.records import push_record
 
 from arkos import applications, config, security
 from arkos.messages import Notification, NotificationThread
@@ -33,6 +34,7 @@ def install(job, to_install):
         nthread.update(Notification("info", "FirstRun", msg))
         try:
             a.install()
+            push_record("app", a.serialized)
         except:
             errors = True
 
@@ -51,8 +53,9 @@ def install(job, to_install):
 @auth.required()
 def firstrun():
     data = request.get_json()
-    resize_boards = ["Raspberry Pi", "Raspberry Pi 2", "Cubieboard2",
-                     "Cubietruck", "BeagleBone Black", "ODROID-U"]
+    resize_boards = ["Raspberry Pi", "Raspberry Pi 2", "Raspberry Pi 3",
+                     "Cubieboard2", "Cubietruck", "BeagleBone Black",
+                     "ODROID-U"]
     if data.get("resize_sd_card", None)\
             and config.get("enviro", "board") in resize_boards:
         part = 1 if config.get("enviro", "board").startswith("Cubie") else 2
@@ -98,7 +101,9 @@ def firstrun():
                 f.write(opt_str.format(data.get("cubie_mac")))
     if data.get("install"):
         as_job(install, data["install"])
+    rootpwd = ""
+    if data.get("protectRoot"):
+        rootpwd = random_string(16)
+        shell("passwd root", stdin="{0}\n{0}\n".format(rootpwd))
     security.initialize_firewall()
-    rootpwd = random_string(16)
-    shell("passwd root", stdin="{0}\n{0}\n".format(rootpwd))
     return jsonify(rootpwd=rootpwd)
