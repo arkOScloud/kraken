@@ -3,8 +3,12 @@
 from setuptools import setup, find_packages
 
 install_requires = [
-    'redis',
-    'itsdangerous'
+    'cryptography',
+    'eventlet',
+    'flask',
+    'flask_socketio',
+    'itsdangerous',
+    'redis'
 ]
 
 

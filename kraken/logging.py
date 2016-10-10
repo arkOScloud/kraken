@@ -10,6 +10,7 @@ Licensed under GPLv3, see LICENSE.md
 import datetime
 import logging
 
+from arkos import logger
 from arkos.utilities import random_string
 from kraken.redis_storage import storage
 
@@ -31,3 +32,11 @@ class APIHandler(logging.Handler):
         storage.prepend("n:{0}".format(data["id"]), data, pipe)
         storage.expire("n:{0}".format(data["id"]), 604800, pipe)
         pipe.execute()
+
+
+class WSGILogWrapper:
+    def info(self, message):
+        logger.debug("WSGI", message)
+
+    def debug(self, message):
+        logger.debug("WSGI", message)

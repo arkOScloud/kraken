@@ -10,6 +10,8 @@ Licensed under GPLv3, see LICENSE.md
 import imp
 import os
 
+from arkos import logger
+
 
 def register_frameworks(app):
     """
@@ -24,5 +26,5 @@ def register_frameworks(app):
             continue
         x = x.split(".py")[0]
         mod = imp.load_module(x, *imp.find_module(x, [fmwkdir]))
-        app.logger.debug(" *** Registering {0}...".format(x))
+        logger.debug("Init", " *** Registering {0}...".format(x))
         app.register_blueprint(mod.backend)

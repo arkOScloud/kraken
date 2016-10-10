@@ -17,10 +17,6 @@ from arkos.utilities.errors import ConnectionError
 class Storage:
     """Manage connection and interface with Redis."""
 
-    def __init__(self):
-        """Initialize."""
-        self.connect()
-
     def connect(self):
         """Connect to Redis server."""
         try:

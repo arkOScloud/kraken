@@ -71,15 +71,21 @@ if __name__ == '__main__':
 
     # Find default config file
     if environment != "prod":
-        if not config_file:
+        if not config_file or not os.path.exists(config_file):
             config_file = os.path.join(
                 os.path.dirname(__file__), "settings.json")
-        if not secrets_file:
+            if not os.path.exists(config_file):
+                config_file = ""
+        if not secrets_file or not os.path.exists(secrets_file):
             secrets_file = os.path.join(
                 os.path.dirname(__file__), "secrets.json")
-        if not policy_file:
+            if not os.path.exists(secrets_file):
+                secrets_file = ""
+        if not policy_file or not os.path.exists(policy_file):
             policy_file = os.path.join(
                 os.path.dirname(__file__), "policies.json")
+            if not os.path.exists(policy_file):
+                policy_file = ""
 
     if action == 'run':
         run_daemon(
