@@ -1,7 +1,17 @@
+"""
+Endpoints for management of network settings.
+
+arkOS Kraken
+(c) 2016 CitizenWeb
+Written by Jacob Cook
+Licensed under GPLv3, see LICENSE.md
+"""
+
 from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
 from kraken import auth
+from arkos import logger
 from arkos.system import network
 
 backend = Blueprint("networks", __name__)
@@ -13,10 +23,10 @@ class NetworksAPI(MethodView):
         nets = network.get_connections(id)
         if id and not nets:
             abort(404)
-        if type(nets) == list:
-            return jsonify(networks=[x.serialized for x in nets])
-        else:
+        if isinstance(nets, networks.Connection):
             return jsonify(network=nets.serialized)
+        else:
+            return jsonify(networks=[x.serialized for x in nets])
 
     @auth.required()
     def post(self):
@@ -43,10 +53,9 @@ class NetworksAPI(MethodView):
                     net.disable()
                 else:
                     abort(422)
-            except Exception, e:
-                resp = jsonify(message=str(e))
-                resp.status_code = 500
-                return resp
+            except Exception as e:
+                logger.error("Network", str(e))
+                return jsonify(errors={"msg": str(e)}), 500
         else:
             net.config = data["config"]
             net.update()
@@ -68,10 +77,10 @@ def get_netifaces(id):
     ifaces = network.get_interfaces(id)
     if id and not ifaces:
         abort(404)
-    if type(ifaces) == list:
-        return jsonify(netifaces=[x.serialized for x in ifaces])
-    else:
+    if isinstance(ifaces, network.Interface):
         return jsonify(netiface=ifaces.serialized)
+    else:
+        return jsonify(netifaces=[x.serialized for x in ifaces])
 
 
 network_view = NetworksAPI.as_view('networks_api')

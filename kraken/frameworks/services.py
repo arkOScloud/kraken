@@ -1,3 +1,12 @@
+"""
+Endpoints for management of system services.
+
+arkOS Kraken
+(c) 2016 CitizenWeb
+Written by Jacob Cook
+Licensed under GPLv3, see LICENSE.md
+"""
+
 from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
@@ -13,21 +22,21 @@ class ServicesAPI(MethodView):
     def get(self, id):
         try:
             svcs = services.get(id)
-        except services.ActionError, e:
+        except services.ActionError as e:
             if id:
-                app.logger.error("%s service status could not be obtained. Failed with error: %s" % (id, e.emsg))
-                resp = jsonify(message="%s service status could not be obtained." % id)
+                app.logger.error("{0} service status could not be obtained. Failed with error: {1}".format(id, e.emsg))
+                resp = jsonify(message="{0} service status could not be obtained.".format(id))
             else:
-                app.logger.error("Service status could not be obtained. Failed with error: %s" % e.emsg)
+                app.logger.error("Service status could not be obtained. Failed with error: {0}".format(e.emsg))
                 resp = jsonify(message="Service status could not be obtained.")
             resp.status_code = 422
             return resp
         if id and not svcs:
             abort(404)
-        if type(svcs) == list:
-            return jsonify(services=[x.serialized for x in svcs if not any(y in x.name for y in ["systemd", "dbus"])])
-        else:
+        if isinstance(svcs, services.Service):
             return jsonify(service=svcs.serialized)
+        else:
+            return jsonify(services=[x.serialized for x in svcs if not any(y in x.name for y in ["systemd", "dbus"])])
 
     @auth.required()
     def post(self):
@@ -63,9 +72,9 @@ class ServicesAPI(MethodView):
             elif data["operation"] == "disable":
                 tag = "disabled"
                 svc.disable()
-        except services.ActionError, e:
-            app.logger.error("%s service could not be %s. Failed with error: %s" % (id, tag, e.emsg))
-            resp = jsonify(message="%s service could not be %s." % (id, tag))
+        except services.ActionError as e:
+            app.logger.error("{0} service could not be {1}. Failed with error: {2}".format(id, tag, e.emsg))
+            resp = jsonify(message="{0} service could not be {1}.".format(id, tag))
             resp.status_code = 422
             return resp
         return jsonify(service=svc.serialized)

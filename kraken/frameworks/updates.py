@@ -1,9 +1,20 @@
-from flask import Response, Blueprint, jsonify, request
+"""
+Endpoints for management of arkOS updates.
+
+arkOS Kraken
+(c) 2016 CitizenWeb
+Written by Jacob Cook
+Licensed under GPLv3, see LICENSE.md
+"""
+
+from flask import Blueprint, jsonify, request
 from flask.views import MethodView
 
+from arkos import logger, storage, updates
+from arkos.messages import NotificationThread
+
 from kraken import auth
-from arkos import storage, updates
-from kraken.messages import Message, remove_record
+from kraken.records import remove_record
 from kraken.jobs import as_job, job_response
 
 backend = Blueprint("updates", __name__)
@@ -18,14 +29,15 @@ class UpdatesAPI(MethodView):
             try:
                 data = updates.check_updates()
             except:
-                Message("error", "Could not reach the update server. Please check your Internet settings.",
-                    head="Update check failed")
+                msg = ("Could not reach the update server. "
+                       "Please check your Internet settings.")
+                logger.error("Updates", msg)
         for x in data:
             if id == x["id"]:
                 return jsonify(update={"id": x["id"], "name": x["name"],
-                    "date": x["date"], "info": x["info"]})
+                                       "date": x["date"], "info": x["info"]})
             ups.append({"id": x["id"], "name": x["name"], "date": x["date"],
-                "info": x["info"]})
+                        "info": x["info"]})
         return jsonify(updates=ups)
 
     @auth.required()
@@ -34,7 +46,8 @@ class UpdatesAPI(MethodView):
         return job_response(id)
 
     def _post(self, job):
-        installed = updates.install_updates(Message(job=job))
+        nthread = NotificationThread(id=job.id)
+        installed = updates.install_updates(nthread)
         for x in installed:
             remove_record("update", x)
         updates.check_updates()
@@ -42,6 +55,8 @@ class UpdatesAPI(MethodView):
 
 updates_view = UpdatesAPI.as_view('updates_api')
 backend.add_url_rule('/api/updates', defaults={'id': None},
-    view_func=updates_view, methods=['GET',])
-backend.add_url_rule('/api/updates', view_func=updates_view, methods=['POST',])
-backend.add_url_rule('/api/updates/<int:id>', view_func=updates_view, methods=['GET',])
+                     view_func=updates_view, methods=['GET', ])
+backend.add_url_rule('/api/updates', view_func=updates_view,
+                     methods=['POST', ])
+backend.add_url_rule('/api/updates/<int:id>', view_func=updates_view,
+                     methods=['GET', ])

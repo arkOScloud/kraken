@@ -2,14 +2,20 @@
 
 from setuptools import setup, find_packages
 
+install_requires = [
+    'cryptography',
+    'eventlet',
+    'flask',
+    'flask_socketio',
+    'itsdangerous',
+    'redis'
+]
+
 
 setup(
     name='arkos-kraken',
-    version='0.7.2',
-    install_requires=[
-        'redis',
-        'itsdangerous'
-    ],
+    version='0.8.0',
+    install_requires=install_requires,
     description='arkOS REST API',
     author='CitizenWeb',
     author_email='jacob@citizenweb.io',

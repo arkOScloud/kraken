@@ -1,4 +1,13 @@
-from flask import Blueprint, jsonify, request, Response
+"""
+Endpoints for management of arkOS configuration.
+
+arkOS Kraken
+(c) 2016 CitizenWeb
+Written by Jacob Cook
+Licensed under GPLv3, see LICENSE.md
+"""
+
+from flask import Blueprint, jsonify, request
 
 from kraken import auth
 from arkos import config
@@ -43,13 +52,16 @@ def datetime():
 @auth.required()
 def shutdown():
     sysconfig.shutdown()
+    return jsonify(), 200
 
 @backend.route('/api/system/reload', methods=["POST",])
 @auth.required()
 def reload():
     sysconfig.reload()
+    return jsonify(), 200
 
 @backend.route('/api/system/reboot', methods=["POST",])
 @auth.required()
 def reboot():
     sysconfig.reboot()
+    return jsonify(), 200

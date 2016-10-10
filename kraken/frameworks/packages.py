@@ -1,11 +1,22 @@
+"""
+Endpoints for management of system packages.
+
+arkOS Kraken
+(c) 2016 CitizenWeb
+Written by Jacob Cook
+Licensed under GPLv3, see LICENSE.md
+"""
+
 import pacman
 
-from flask import Response, Blueprint, jsonify, request, abort
+from flask import Blueprint, jsonify, request, abort
 from flask.views import MethodView
+
+from arkos.messages import Notification, NotificationThread
 
 from kraken import auth
 from kraken.jobs import as_job, job_response
-from kraken.messages import Message, push_record, remove_record
+from kraken.records import push_record
 
 backend = Blueprint("packages", __name__)
 
@@ -37,41 +48,57 @@ class PackagesAPI(MethodView):
         return job_response(id)
 
     def _operation(self, job, install, remove):
-        message = Message(job=job)
         if install:
             try:
                 pacman.refresh()
                 prereqs = pacman.needs_for(install)
-                message.update("info", ", ".join(prereqs), head="Installing %s package(s): " % len(prereqs))
-                pacman.install(install)
+                upgr = (x["id"] for x in pacman.get_installed()
+                        if x.get("upgradable"))
+                if sorted(upgr) == sorted(install):
+                    # Upgrade
+                    msg = "Performing system upgrade..."
+                    msg = Notification("info", "Packages", msg)
+                    nthread = NotificationThread(id=job.id, message=msg)
+                    pacman.upgrade()
+                else:
+                    # Install
+                    title = "Installing {0} package(s)".format(len(prereqs))
+                    msg = Notification("info", "Packages", ", ".join(prereqs))
+                    nthread = NotificationThread(
+                        id=job.id, title=title, message=msg)
+                    pacman.install(install)
                 for x in prereqs:
                     try:
                         info = process_info(pacman.get_info(x))
-                        if not "installed" in info:
+                        if "installed" not in info:
                             info["installed"] = True
                         push_record("package", info)
                     except:
                         pass
-            except Exception, e:
-                message.complete("error", str(e))
+            except Exception as e:
+                nthread.complete(Notification("error", "Packages", str(e)))
                 return
         if remove:
             try:
                 prereqs = pacman.depends_for(remove)
-                message.update("info", ", ".join(prereqs), head="Removing %s package(s): %s" % len(prereqs))
+                title = "Removing {0} package(s)".format(len(prereqs))
+                msg = Notification("info", "Packages", ", ".join(prereqs))
+                nthread = NotificationThread(
+                    id=job.id, title=title, message=msg)
                 pacman.remove(remove)
                 for x in prereqs:
                     try:
                         info = process_info(pacman.get_info(x))
-                        if not "installed" in info:
+                        if "installed" not in info:
                             info["installed"] = False
                         push_record("package", info)
                     except:
                         pass
-            except Exception, e:
-                message.complete("error", str(e))
+            except Exception as e:
+                nthread.complete(Notification("error", "Packages", str(e)))
                 return
-        message.complete("success", "Operations completed successfully")
+        msg = "Operations completed successfully"
+        nthread.complete(Notification("success", "Packages", msg))
 
 
 def process_info(info):
@@ -81,14 +108,15 @@ def process_info(info):
             data["id"] = info["Name"]
             continue
         data[x.lower().replace(" ", "_")] = info[x]
-    if not "upgradable" in data:
+    if "upgradable" not in data:
         data["upgradable"] = False
     return data
 
 
 packages_view = PackagesAPI.as_view('sites_api')
 backend.add_url_rule('/api/system/packages', defaults={'id': None},
-    view_func=packages_view, methods=['GET',])
-backend.add_url_rule('/api/system/packages', view_func=packages_view, methods=['POST',])
-backend.add_url_rule('/api/system/packages/<string:id>', view_func=packages_view,
-    methods=['GET',])
+                     view_func=packages_view, methods=['GET', ])
+backend.add_url_rule('/api/system/packages', view_func=packages_view,
+                     methods=['POST', ])
+backend.add_url_rule('/api/system/packages/<string:id>',
+                     view_func=packages_view, methods=['GET', ])

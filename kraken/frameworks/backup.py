@@ -1,11 +1,20 @@
-import base64
+"""
+Endpoints for management of arkOS backups.
+
+arkOS Kraken
+(c) 2016 CitizenWeb
+Written by Jacob Cook
+Licensed under GPLv3, see LICENSE.md
+"""
 
 from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
-from kraken import auth
 from arkos import backup
-from kraken.messages import Message, push_record
+from arkos.messages import NotificationThread
+
+from kraken import auth
+from kraken.records import push_record
 from kraken.jobs import as_job, job_response
 
 backend = Blueprint("backup", __name__)
@@ -16,7 +25,8 @@ class BackupsAPI(MethodView):
     def get(self, id, time):
         backups = backup.get()
         if id and time and backups:
-            return jsonify(backup=[x for x in backups if x["id"] == id+"/"+time])
+            return jsonify(
+                backup=[x for x in backups if x["id"] == id + "/" + time])
         elif id and backups:
             return jsonify(backups=[x for x in backups if x["pid"] == id])
         elif id or time:
@@ -30,19 +40,14 @@ class BackupsAPI(MethodView):
         return job_response(id)
 
     def _post(self, job, id):
-        message = Message(job=job)
-        message.update("info", "Backing up %s..." % id)
-        try:
-            b = backup.create(id)
-            message.complete("success", "%s backed up successfully" % id)
-            push_record("backups", b)
-        except Exception, e:
-            message.complete("error", "%s could not be backed up: %s" % (id, str(e)))
+        nthread = NotificationThread(id=job.id)
+        b = backup.create(id, nthread=nthread)
+        push_record("backups", b)
 
     @auth.required()
     def put(self, id, time):
         data = request.get_json().get("backup")
-        data["id"] = id+"/"+time
+        data["id"] = id + "/" + time
         if id and time and data:
             id = as_job(self._put, data)
             return job_response(id, data={"backup": data})
@@ -50,14 +55,9 @@ class BackupsAPI(MethodView):
             abort(404)
 
     def _put(self, job, data):
-        message = Message(job=job)
-        message.update("info", "Restoring %s..." % data["pid"])
-        try:
-            b = backup.restore(data)
-            message.complete("success", "%s restored successfully" % b["pid"])
-            push_record("backup", b)
-        except Exception, e:
-            message.complete("error", "%s could not be restored: %s" % (data["pid"], str(e)))
+        nthread = NotificationThread(id=job.id)
+        b = backup.restore(data, nthread=nthread)
+        push_record("backup", b)
 
     @auth.required()
     def delete(self, id, time):
@@ -73,8 +73,8 @@ def get_possible():
 
 backups_view = BackupsAPI.as_view('backups_api')
 backend.add_url_rule('/api/backups', defaults={'id': None, 'time': None},
-    view_func=backups_view, methods=['GET',])
+                     view_func=backups_view, methods=['GET', ])
 backend.add_url_rule('/api/backups/<string:id>', defaults={'time': None},
-    view_func=backups_view, methods=['GET', 'POST',])
-backend.add_url_rule('/api/backups/<string:id>/<string:time>', view_func=backups_view,
-    methods=['GET', 'PUT', 'DELETE'])
+                     view_func=backups_view, methods=['GET', 'POST', ])
+backend.add_url_rule('/api/backups/<string:id>/<string:time>',
+                     view_func=backups_view, methods=['GET', 'PUT', 'DELETE'])

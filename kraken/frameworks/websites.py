@@ -1,10 +1,20 @@
+"""
+Endpoints for management of arkOS websites.
+
+arkOS Kraken
+(c) 2016 CitizenWeb
+Written by Jacob Cook
+Licensed under GPLv3, see LICENSE.md
+"""
+
 from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
+from arkos import applications, certificates, websites, logger
+from arkos.messages import Notification, NotificationThread
+
 from kraken import auth
-from kraken.application import app
-from arkos import applications, websites, certificates, tracked_services
-from kraken.messages import Message, push_record, remove_record
+from kraken.records import push_record, remove_record
 from kraken.jobs import as_job, job_response
 
 backend = Blueprint("websites", __name__)
@@ -18,10 +28,10 @@ class WebsitesAPI(MethodView):
         sites = websites.get(id)
         if id and not sites:
             abort(404)
-        if type(sites) == list:
-            return jsonify(websites=[x.serialized for x in sites])
-        else:
+        if isinstance(sites, websites.Site):
             return jsonify(website=sites.serialized)
+        else:
+            return jsonify(websites=[x.serialized for x in sites])
 
     @auth.required()
     def post(self):
@@ -30,18 +40,16 @@ class WebsitesAPI(MethodView):
         return job_response(id)
 
     def _post(self, job, data):
-        message = Message(job=job)
-        sapp = applications.get(data["site_type"])
+        nthread = NotificationThread(id=job.id)
+        sapp = applications.get(data["app"])
         site = sapp._website
-        site = site(data["id"], data["addr"], data["port"])
+        site = site(sapp, data["id"], data["domain"], data["port"])
         try:
-            specialmsg = site.install(sapp, data["extra_data"], True, message)
-            message.complete("success", "%s site installed successfully" % site.meta.name, head="Installing website")
+            specialmsg = site.install(data["extra_data"], True, nthread)
             if specialmsg:
-                Message("info", specialmsg)
+                Notification("info", "Websites", specialmsg).send()
             push_record("website", site.serialized)
-        except Exception, e:
-            message.complete("error", "%s could not be installed: %s" % (data["id"], str(e)), head="Installing website")
+        except Exception as e:
             remove_record("website", data["id"])
             raise
 
@@ -63,12 +71,12 @@ class WebsitesAPI(MethodView):
         elif data.get("operation") == "update":
             site.update()
         else:
-            site.addr = data["addr"]
+            site.domain = data["domain"]
             site.port = data["port"]
             site.edit(data.get("new_name"))
         push_record("website", site.serialized)
         remove_record("website", id)
-        return jsonify(message="Site edited successfully")
+        return jsonify(website=site.serialized)
 
     @auth.required()
     def delete(self, id):
@@ -76,19 +84,15 @@ class WebsitesAPI(MethodView):
         return job_response(id)
 
     def _delete(self, job, id):
-        message = Message(job=job)
+        nthread = NotificationThread(id=job.id)
         site = websites.get(id)
-        try:
-            site.remove(message)
-            message.complete("success", "%s site removed successfully" % site.meta.name, head="Removing website")
-            remove_record("website", id)
-            remove_record("policy", id)
-        except Exception, e:
-            message.complete("error", "%s could not be removed: %s" % (id, str(e)), head="Removing website")
-            raise
+        site.remove(nthread)
+        remove_record("website", id)
+        remove_record("policy", id)
 
 
-@backend.route('/api/websites/actions/<string:id>/<string:action>', methods=["POST",])
+@backend.route('/api/websites/actions/<string:id>/<string:action>',
+               methods=["POST", ])
 @auth.required()
 def perform_action(id, action):
     w = websites.get(id)
@@ -99,17 +103,16 @@ def perform_action(id, action):
     actionfunc = getattr(w, action)
     try:
         actionfunc()
-    except Exception, e:
-        resp = jsonify(message=str(e))
-        resp.status_code = 500
-        return resp
+    except Exception as e:
+        logger.error("Websites", str(e))
+        return jsonify(errors={"msg": str(e)}), 500
     finally:
         return Response(status=200)
 
 
 sites_view = WebsitesAPI.as_view('sites_api')
 backend.add_url_rule('/api/websites', defaults={'id': None},
-    view_func=sites_view, methods=['GET',])
-backend.add_url_rule('/api/websites', view_func=sites_view, methods=['POST',])
+                     view_func=sites_view, methods=['GET', ])
+backend.add_url_rule('/api/websites', view_func=sites_view, methods=['POST', ])
 backend.add_url_rule('/api/websites/<string:id>', view_func=sites_view,
-    methods=['GET', 'PUT', 'DELETE'])
+                     methods=['GET', 'PUT', 'DELETE'])

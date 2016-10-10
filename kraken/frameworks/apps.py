@@ -1,11 +1,22 @@
+"""
+Endpoints for management of arkOS Applications.
+
+arkOS Kraken
+(c) 2016 CitizenWeb
+Written by Jacob Cook
+Licensed under GPLv3, see LICENSE.md
+"""
+
 import os
 
-from flask import Response, Blueprint, abort, jsonify, request, send_from_directory
+from flask import Blueprint, abort, jsonify, request, send_from_directory
 from flask.views import MethodView
 
-from kraken import auth
 from arkos import applications
-from kraken.messages import Message, push_record
+from arkos.messages import NotificationThread
+
+from kraken import auth
+from kraken.records import push_record
 from kraken.jobs import as_job, job_response
 
 backend = Blueprint("apps", __name__)
@@ -16,15 +27,22 @@ class ApplicationsAPI(MethodView):
     def get(self, id):
         if request.args.get("rescan", None):
             applications.scan()
-        apps = applications.get(id, type=request.args.get("type", None),
+        installed = request.args.get("installed", None)
+        if installed and installed.lower() == "true":
+            installed = True
+        elif installed and installed.lower() == "false":
+            installed = False
+        apps = applications.get(
+            id, type=request.args.get("type", None),
             loadable=request.args.get("loadable", None),
-            installed=request.args.get("installed", None))
+            installed=installed,
+            cry=False)
         if id and not apps:
             abort(404)
-        if type(apps) == list:
-            return jsonify(apps=[x.serialized for x in apps])
-        else:
+        if isinstance(apps, applications.App):
             return jsonify(app=apps.serialized)
+        else:
+            return jsonify(apps=[x.serialized for x in apps])
 
     @auth.required()
     def put(self, id):
@@ -33,7 +51,7 @@ class ApplicationsAPI(MethodView):
         if not app:
             abort(404)
         if operation == "install":
-            if app.installed and not (hasattr(app, "upgradable") and app.upgradable):
+            if app.installed and not getattr(app, "upgradable", None):
                 return jsonify(app=app.serialized)
             id = as_job(self._install, app)
         elif operation == "uninstall":
@@ -43,35 +61,20 @@ class ApplicationsAPI(MethodView):
                 return resp
             id = as_job(self._uninstall, app)
         else:
-            resp = jsonify(message="Unknown operation specified")
-            resp.status_code = 422
-            return resp
+            return jsonify(errors={"msg": "Unknown operation"}), 422
         data = app.serialized
         data["is_ready"] = False
         return job_response(id, {"app": data})
 
     def _install(self, job, app):
-        message = Message(job=job)
-        try:
-            app.install(message=message, force=True)
-            smsg = "%s installed successfully." % app.name
-            if app.type == "website":
-                smsg += " Go to 'My Applications > %s > Add Website' to set up a site using this app." % app.name
-            message.complete("success", smsg)
-            push_record("app", app.serialized)
-        except Exception, e:
-            message.complete("error", "%s could not be installed: %s" % (app.name, str(e)))
-            raise
+        nthread = NotificationThread(id=job.id)
+        app.install(nthread=nthread, force=True, cry=False)
+        push_record("app", app.serialized)
 
     def _uninstall(self, job, app):
-        message = Message(job=job)
-        try:
-            app.uninstall(message=message)
-            message.complete("success", "%s uninstalled successfully" % app.name)
-            push_record("app", app.serialized)
-        except Exception, e:
-            message.complete("error", "%s could not be uninstalled: %s" % (app.name, str(e)))
-            raise
+        nthread = NotificationThread(id=job.id)
+        app.uninstall(nthread=nthread)
+        push_record("app", app.serialized)
 
 
 @auth.required()
@@ -84,17 +87,19 @@ def dispatcher(id, path):
     return fn(*params[1:])
 
 
-apps_view = ApplicationsAPI.as_view('apps_api')
-backend.add_url_rule('/api/apps', defaults={'id': None},
-    view_func=apps_view, methods=['GET',])
-backend.add_url_rule('/api/apps/<string:id>', view_func=apps_view,
-    methods=['GET', 'PUT'])
-backend.add_url_rule('/api/apps/<string:id>/<path:path>', view_func=dispatcher,
-    methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE'])
-
-@backend.route('/api/apps/logo/<string:id>')
-def get_app_logo(id):
+@backend.route('/api/apps/assets/<string:id>/<string:asset>')
+def get_app_asset(id, asset):
     app = applications.get(id)
     if not app:
         abort(404)
-    return send_from_directory(os.path.join('/var/lib/arkos/applications', id, 'assets'), "logo.png")
+    return send_from_directory(
+        os.path.join('/var/lib/arkos/applications', id, 'assets'), asset)
+
+
+apps_view = ApplicationsAPI.as_view('apps_api')
+backend.add_url_rule('/api/apps', defaults={'id': None},
+                     view_func=apps_view, methods=['GET', ])
+backend.add_url_rule('/api/apps/<string:id>', view_func=apps_view,
+                     methods=['GET', 'PUT'])
+backend.add_url_rule('/api/apps/<string:id>/<path:path>', view_func=dispatcher,
+                     methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE'])

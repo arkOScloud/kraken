@@ -1,9 +1,21 @@
+"""
+Endpoints for management of filesystems.
+
+arkOS Kraken
+(c) 2016 CitizenWeb
+Written by Jacob Cook
+Licensed under GPLv3, see LICENSE.md
+"""
+
 from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
-from kraken import auth
+from arkos import logger
+from arkos.messages import Notification, NotificationThread
 from arkos.system import filesystems
-from kraken.messages import Message, push_record
+
+from kraken import auth
+from kraken.records import push_record
 from kraken.jobs import as_job, job_response
 
 backend = Blueprint("filesystems", __name__)
@@ -15,10 +27,11 @@ class DisksAPI(MethodView):
         disks = filesystems.get(id)
         if id and not disks:
             abort(404)
-        if type(disks) == list:
-            return jsonify(filesystems=[x.serialized for x in disks])
-        else:
+        if isinstance(
+                disks, (filesystems.VirtualDisk, filesystems.DiskPartition)):
             return jsonify(filesystem=disks.serialized)
+        else:
+            return jsonify(filesystems=[x.serialized for x in disks])
 
     @auth.required()
     def post(self):
@@ -27,23 +40,19 @@ class DisksAPI(MethodView):
         return job_response(id, data={"filesystem": data})
 
     def _post(self, job, data):
-        message = Message(job=job)
-        message.update("info", "Creating virtual disk...")
+        nthread = NotificationThread(id=job.id)
         disk = filesystems.VirtualDisk(id=data["id"], size=data["size"])
-        try:
-            disk.create()
-        except Exception, e:
-            message.complete("error", "Virtual disk could not be created: %s" % str(e))
-            raise
+        disk.create(will_crypt=data["crypt"], nthread=nthread)
         if data["crypt"]:
             try:
-                message.update("info", "Encrypting virtual disk...")
+                msg = "Encrypting virtual disk..."
+                nthread.update(Notification("info", "Filesystems", msg))
                 disk.encrypt(data["passwd"])
-            except Exception, e:
+            except Exception as e:
                 disk.remove()
-                message.complete("error", "Virtual disk could not be encrypted: %s" % str(e))
                 raise
-        message.complete("success", "Virtual disk created successfully")
+            msg = "Virtual disk created successfully"
+            nthread.complete(Notification("success", "Filesystems", msg))
         push_record("filesystem", disk.serialized)
 
     @auth.required()
@@ -54,7 +63,6 @@ class DisksAPI(MethodView):
             abort(404)
         try:
             if data["operation"] == "mount":
-                op = "mounted"
                 if disk.mountpoint:
                     abort(400)
                 elif disk.crypt and not data.get("passwd"):
@@ -63,19 +71,15 @@ class DisksAPI(MethodView):
                     disk.mountpoint = data["mountpoint"]
                 disk.mount(data.get("passwd"))
             elif data["operation"] == "umount":
-                op = "unmounted"
                 disk.umount()
             elif data["operation"] == "enable":
-                op = "enabled"
                 disk.enable()
             elif data["operation"] == "disable":
-                op = "disabled"
                 disk.disable()
-        except Exception, e:
-            resp = jsonify(message="Operation failed: %s" % str(e))
-            resp.status_code = 422
-            return resp
-        return jsonify(filesystem=disk.serialized, message="Disk %s successfully"%op)
+        except Exception as e:
+            logger.error("Filesystems", str(e))
+            return jsonify(errors={"msg": str(e)}), 500
+        return jsonify(filesystem=disk.serialized)
 
     @auth.required()
     def delete(self, id):
@@ -93,7 +97,8 @@ def list_points():
 
 disks_view = DisksAPI.as_view('disks_api')
 backend.add_url_rule('/api/system/filesystems', defaults={'id': None},
-    view_func=disks_view, methods=['GET',])
-backend.add_url_rule('/api/system/filesystems', view_func=disks_view, methods=['POST',])
-backend.add_url_rule('/api/system/filesystems/<string:id>', view_func=disks_view,
-    methods=['GET', 'PUT', 'DELETE'])
+                     view_func=disks_view, methods=['GET', ])
+backend.add_url_rule('/api/system/filesystems', view_func=disks_view,
+                     methods=['POST', ])
+backend.add_url_rule('/api/system/filesystems/<string:id>',
+                     view_func=disks_view, methods=['GET', 'PUT', 'DELETE'])

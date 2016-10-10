@@ -1,3 +1,12 @@
+"""
+Endpoints for retrieval of system statistics.
+
+arkOS Kraken
+(c) 2016 CitizenWeb
+Written by Jacob Cook
+Licensed under GPLv3, see LICENSE.md
+"""
+
 from flask import Blueprint, jsonify
 
 from kraken import auth

@@ -1,4 +1,13 @@
-from flask import Response, Blueprint, abort, jsonify, request
+"""
+Endpoints for management of arkOS security policies.
+
+arkOS Kraken
+(c) 2016 CitizenWeb
+Written by Jacob Cook
+Licensed under GPLv3, see LICENSE.md
+"""
+
+from flask import Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
 from kraken import auth
@@ -13,10 +22,20 @@ class PolicyAPI(MethodView):
         svcs = tracked_services.get(id)
         if id and not svcs:
             abort(404)
-        if type(svcs) == list:
-            return jsonify(policies=[x.serialized for x in svcs])
-        else:
+        if isinstance(svcs, tracked_services.SecurityPolicy):
             return jsonify(policy=svcs.serialized)
+        else:
+            return jsonify(policies=[x.serialized for x in svcs])
+
+    @auth.required()
+    def post(self):
+        data = request.get_json()["policy"]
+        pol = tracked_services.SecurityPolicy(
+            "custom", data["id"], data["name"], "shield", data["ports"],
+            data["policy"]
+        )
+        pol.save()
+        return jsonify(policy=pol.serialized)
 
     @auth.required()
     def put(self, id):
@@ -27,6 +46,14 @@ class PolicyAPI(MethodView):
         policy.policy = data["policy"]
         policy.save()
         return jsonify(policy=policy.serialized)
+
+    @auth.required()
+    def delete(self, id):
+        policy = tracked_services.get(id)
+        if not id or not policy or policy.type != "custom":
+            abort(404)
+        policy.remove()
+        return jsonify(), 204
 
 
 class DefenceAPI(MethodView):
@@ -46,7 +73,9 @@ class DefenceAPI(MethodView):
 policy_view = PolicyAPI.as_view('policy_api')
 backend.add_url_rule('/api/system/policies', defaults={'id': None},
     view_func=policy_view, methods=['GET',])
-backend.add_url_rule('/api/system/policies/<string:id>', view_func=policy_view, methods=['GET', 'PUT'])
+backend.add_url_rule('/api/system/policies', view_func=policy_view,
+                     methods=['POST', ])
+backend.add_url_rule('/api/system/policies/<string:id>', view_func=policy_view, methods=['GET', 'PUT', 'DELETE'])
 
 defence_view = DefenceAPI.as_view('defence_api')
 backend.add_url_rule('/api/system/jails', defaults={'id': None},

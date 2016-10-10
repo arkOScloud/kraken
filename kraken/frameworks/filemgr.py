@@ -1,3 +1,12 @@
+"""
+Endpoints for management of files and folders.
+
+arkOS Kraken
+(c) 2016 CitizenWeb
+Written by Jacob Cook
+Licensed under GPLv3, see LICENSE.md
+"""
+
 import grp
 import mimetypes
 import os
@@ -7,14 +16,13 @@ import stat
 
 from arkos import shared_files
 from arkos.system import users, groups
-from arkos.utilities import b64_to_path, path_to_b64, compress, extract, str_fperms, random_string
+from arkos.utilities import is_binary, b64_to_path, path_to_b64, compress, extract, str_fperms, random_string
 
 from kraken import auth
 from werkzeug import secure_filename
 from flask import Response, Blueprint, jsonify, request, abort
 from flask.views import MethodView
-from kraken.messages import remove_record
-from kraken.jobs import as_job, job_response
+from kraken.records import remove_record
 
 backend = Blueprint("filemgr", __name__)
 
@@ -39,9 +47,7 @@ class FileManagerAPI(MethodView):
         if not os.path.exists(path):
             abort(404)
         if not os.path.isdir(path):
-            resp = jsonify(message="Can only upload into folders")
-            resp.status_code = 422
-            return resp
+            return jsonify(errors={"msg": "Can only upload into folders"}), 422
         if request.headers.get('Content-Type').startswith("multipart/form-data"):
             results = []
             f = request.files
@@ -55,9 +61,7 @@ class FileManagerAPI(MethodView):
             if not os.path.exists(path):
                 abort(404)
             if not os.path.isdir(path):
-                resp = jsonify(message="Can only create into folders")
-                resp.status_code = 422
-                return resp
+                return jsonify(errors={"msg": "Can only create into folders"}), 422
             if data["folder"]:
                 os.makedirs(os.path.join(path, data["name"]))
             else:
@@ -87,9 +91,7 @@ class FileManagerAPI(MethodView):
             return jsonify(file=as_dict(data["path"]))
         elif data["operation"] == "extract":
             if not orig["type"] == "archive":
-                resp = jsonify(message="Not an archive")
-                resp.status_code = 422
-                return resp
+                return jsonify(errors={"msg": "Not an archive"}), 422
             extract(data["path"], os.path.dirname(data["path"]))
             return jsonify(file=as_dict(data["path"]))
         elif data["operation"] == "props":
@@ -103,9 +105,7 @@ class FileManagerAPI(MethodView):
                 if u and g:
                     uid, gid = u.uid, g.gid
                 if uid == None or gid == None:
-                    resp = jsonify(message="Invalid user/group specification")
-                    resp.status_code = 422
-                    return resp
+                    return jsonify(errors={"msg": "Invalid user/group specification"}), 422
                 if data["folder"]:
                     os.chown(data["path"], uid, gid)
                     for r, d, f in os.walk(data["path"]):
@@ -117,14 +117,14 @@ class FileManagerAPI(MethodView):
                     os.chown(data["path"], u.uid, g.gid)
             if data["perms"]["oct"] != orig["perms"]["oct"]:
                 if data["folder"]:
-                    os.chmod(data["path"], int(data["perms"]["oct"][1:], 8))
+                    os.chmod(data["path"], int(data["perms"]["oct"], 8))
                     for r, d, f in os.walk(data["path"]):
                         for x in d:
-                            os.chmod(os.path.join(r, x), int(data["perms"]["oct"][1:], 8))
+                            os.chmod(os.path.join(r, x), int(data["perms"]["oct"], 8))
                         for x in f:
-                            os.chmod(os.path.join(r, x), int(data["perms"]["oct"][1:], 8))
+                            os.chmod(os.path.join(r, x), int(data["perms"]["oct"], 8))
                 else:
-                    os.chmod(data["path"], int(data["perms"]["oct"][1:], 8))
+                    os.chmod(data["path"], int(data["perms"]["oct"], 8))
             return jsonify(file=as_dict(data["path"]))
         else:
             abort(422)
@@ -152,16 +152,16 @@ class SharingAPI(MethodView):
         shares = shared_files.get(id)
         if id and not shares:
             abort(404)
-        if type(shares) == list:
-            return jsonify(shares=[x.serialized for x in shares])
-        else:
+        if isinstance(shares, shared_files.SharedFile):
             return jsonify(share=shares.serialized)
+        else:
+            return jsonify(shares=[x.serialized for x in shares])
 
     @auth.required()
     def post(self):
         data = request.get_json()["share"]
-        id = random_string()
-        share = shared_files.Share(id, data["path"], data.get("expires", 0))
+        id = random_string(16)
+        share = shared_files.SharedFile(id, data["path"], data.get("expires", 0))
         share.add()
         return jsonify(share=share.serialized)
 
@@ -191,11 +191,9 @@ def download(id):
     item = shared_files.get(id)
     if not item:
         abort(404)
-    if item.is_expired():
+    if item.is_expired:
         item.delete()
-        resp = jsonify(message="The requested item has expired")
-        resp.status_code = 410
-        return resp
+        return jsonify(errors={"msg": "The requested item has expired"}), 410
     if item.expires == 0:
         item.delete()
         remove_record("share", item.id)
@@ -207,54 +205,73 @@ def download(id):
             data = f.read()
         resp = Response(data, mimetype="application/octet-stream")
         resp.headers["Content-Length"] = os.path.getsize(apath)
-        resp.headers["Content-Disposition"] = "attachment; filename=%s" % os.path.basename(apath)
+        resp.headers["Content-Disposition"] = "attachment; filename={0}".format(os.path.basename(apath))
         return resp
     else:
         with open(path, "r") as f:
             data = f.read()
         resp = Response(data, mimetype="application/octet-stream")
         resp.headers["Content-Length"] = str(len(data))
-        resp.headers["Content-Disposition"] = "attachment; filename=%s" % os.path.basename(path)
+        resp.headers["Content-Disposition"] = "attachment; filename={0}".format(os.path.basename(path))
         return resp
 
 
 def as_dict(path, content=False):
     name = os.path.basename(path)
-    data = {"id": path_to_b64(path), "name": name, "path": path, "folder": False,
-        "hidden": name.startswith(".")}
+    data = {"id": path_to_b64(path), "name": name,
+            "path": path, "folder": False, "hidden": name.startswith(".")}
     fstat = os.lstat(path)
     mode = fstat[stat.ST_MODE]
 
     if os.path.ismount(path):
         data["type"] = "mount"
         data["folder"] = True
-        data["icon"] = "fa-hdd-o"
+        data["icon"] = "disk outline"
     elif stat.S_ISLNK(mode):
         data["type"] = "link"
         data["realpath"] = os.path.realpath(path)
         data["folder"] = os.path.isdir(data["realpath"])
-        data["icon"] = "fa-link"
+        data["icon"] = "chain"
     elif stat.S_ISDIR(mode):
         data["type"] = "folder"
         data["folder"] = True
-        data["icon"] = "fa-folder-o"
+        data["icon"] = "folder outline"
     elif stat.S_ISSOCK(mode):
         data["type"] = "socket"
-        data["icon"] = "fa-plug"
+        data["icon"] = "plug"
     elif stat.S_ISBLK(mode):
         data["type"] = "block"
-        data["icon"] = "fa-hdd-o"
+        data["icon"] = "disk outline"
     elif stat.S_ISREG(mode):
         if name.endswith((".tar", ".gz", ".tar.gz", ".tgz", ".bz2", ".tar.bz2", ".tbz2", ".zip")):
             data["type"] = "archive"
         else:
             data["type"] = "file"
-        data["icon"] = guess_file_icon(name)
+        data["icon"] = guess_file_icon(name.lower())
     else:
         data["type"] = "unknown"
-        data["icon"] = "fa-question-circle"
+        data["icon"] = "question circle"
     try:
-        data["perms"] = {"oct": oct(stat.S_IMODE(mode)), "str": str_fperms(mode)}
+        permstr = str_fperms(mode)
+        data["perms"] = {
+            "oct": oct(stat.S_IMODE(mode)),
+            "str": permstr,
+            "user": {
+                "read": permstr[0] == "r",
+                "write": permstr[1] == "w",
+                "execute": permstr[2] == "x"
+            },
+            "group": {
+                "read": permstr[3] == "r",
+                "write": permstr[4] == "w",
+                "execute": permstr[5] == "x"
+            },
+            "all": {
+                "read": permstr[6] == "r",
+                "write": permstr[7] == "w",
+                "execute": permstr[8] == "x"
+            }
+        }
         data["size"] = fstat[stat.ST_SIZE]
     except:
         return
@@ -267,11 +284,9 @@ def as_dict(path, content=False):
     except:
         data["group"] = str(fstat[stat.ST_GID])
     if data["type"] == "file":
-        tc = "".join(map(chr, [7,8,9,10,12,13,27] + range(0x20, 0x100)))
-        ibs = lambda b: bool(b.translate(None, tc))
-        with open(path, 'r') as f:
+        with open(path, 'rb') as f:
             try:
-                data["binary"] = ibs(f.read(1024))
+                data["binary"] = is_binary(f.read(1024))
             except:
                 data["binary"] = True
     else:
@@ -279,39 +294,42 @@ def as_dict(path, content=False):
     data["mimetype"] = mimetypes.guess_type(path)[0]
     data["selected"] = False
     if content:
-        with open(path, "r") as f:
-            data["content"] = f.read()
+        with open(path, "rb") as f:
+            data["content"] = f.read().decode()
     return data
+
 
 def guess_file_icon(name):
     if name.endswith((".xls", ".xlsx", ".ods")):
-        return "fa-file-excel-o"
+        return "file excel outline"
     elif name.endswith((".mp3", ".wav", ".flac", ".ogg", ".m4a", ".wma", ".aac")):
-        return "fa-file-audio-o"
-    elif name.endswith((".mkv", ".avi", ".mov", ".wmv", ".mp4", ".m4v", ".mpg")):
-        return "fa-file-video-o"
+        return "file audio outline"
+    elif name.endswith((".mkv", ".avi", ".mov", ".wmv", ".mp4", ".m4v", ".mpg", ".gifv", ".webm")):
+        return "file video outline"
     elif name.endswith(".pdf"):
-        return "fa-file-pdf-o"
+        return "file pdf outline"
     elif name.endswith((".ppt", ".pptx", ".odp")):
-        return "fa-file-powerpoint-o"
+        return "file powerpoint outline"
     elif name.endswith((".jpg", ".jpeg", ".png", ".gif", ".tif", ".tiff", ".bmp")):
-        return "fa-file-image-o"
+        return "file image outline"
     elif name.endswith((".zip", ".tar", ".gz", ".bz2", ".rar", ".tgz", ".tbz2")):
-        return "fa-file-archive-o"
+        return "file archive outline"
     elif name.endswith((".doc", ".docx", ".odt")):
-        return "fa-file-word-o"
+        return "file word outline"
+    elif name.endswith((".txt", ".rtf", ".md", ".markdown")):
+        return "file text outline"
     elif name.endswith((".php", ".js", ".py", ".sh", ".html", ".xml", ".rb", ".css")):
-        return "fa-file-code-o"
+        return "file code outline"
     else:
-        return "fa-file-o"
+        return "file outline"
 
 
 filemgr_view = FileManagerAPI.as_view('filemgr_api')
 backend.add_url_rule('/api/files/<string:path>', view_func=filemgr_view,
     methods=['GET', 'POST', 'PUT', 'DELETE'])
 shares_view = SharingAPI.as_view('sharing_api')
-backend.add_url_rule('/api/shares', defaults={"id": None}, view_func=shares_view,
+backend.add_url_rule('/api/shared_files', defaults={"id": None}, view_func=shares_view,
     methods=['GET',])
-backend.add_url_rule('/api/shares', view_func=shares_view, methods=['POST',])
-backend.add_url_rule('/api/shares/<string:id>', view_func=shares_view,
+backend.add_url_rule('/api/shared_files', view_func=shares_view, methods=['POST',])
+backend.add_url_rule('/api/shared_files/<string:id>', view_func=shares_view,
     methods=['GET', 'PUT', 'DELETE'])

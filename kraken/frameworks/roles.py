@@ -1,8 +1,18 @@
+"""
+Endpoints for management of arkOS users, groups and domains.
+
+arkOS Kraken
+(c) 2016 CitizenWeb
+Written by Jacob Cook
+Licensed under GPLv3, see LICENSE.md
+"""
+
 from flask import Response, Blueprint, abort, jsonify, request
 from flask.views import MethodView
 
 from kraken import auth
 from arkos.system import users, groups, domains
+from arkos.utilities import errors
 
 backend = Blueprint("roles", __name__)
 
@@ -13,24 +23,24 @@ class UsersAPI(MethodView):
         u = users.get(id)
         if id and not u:
             abort(404)
-        if type(u) == list:
-            return jsonify(users=[x.serialized for x in u])
-        else:
+        if isinstance(u, users.User):
             return jsonify(user=u.serialized)
+        else:
+            return jsonify(users=[x.serialized for x in u])
 
     @auth.required()
     def post(self):
         data = request.get_json()["user"]
         try:
             u = users.User(name=data["name"], first_name=data["first_name"],
-                last_name=data["last_name"], domain=data["domain"],
-                admin=data["admin"], sudo=data["sudo"])
+                           last_name=data["last_name"], domain=data["domain"],
+                           admin=data["admin"], sudo=data["sudo"])
             u.add(data["passwd"])
-        except Exception, e:
-            resp = jsonify(message="User couldn't be added: %s" % str(e))
-            resp.status_code = 422
-            return resp
-        return jsonify(user=u.serialized, message="User %s added successfully" % str(u.name))
+        except KeyError as e:
+            raise errors.InvalidConfigError(str(e))
+        except errors.InvalidConfigError as e:
+            return jsonify(errors={"msg": str(e)}), 422
+        return jsonify(user=u.serialized)
 
     @auth.required()
     def put(self, id):
@@ -38,19 +48,19 @@ class UsersAPI(MethodView):
         u = users.get(id)
         if not u:
             abort(404)
-        u.first_name = data["first_name"]
-        u.last_name = data["last_name"]
-        u.domain = data["domain"]
-        u.admin = data["admin"]
-        u.sudo = data["sudo"]
-        u.mail = [str(x) for x in data["mail_addresses"]]
         try:
+            u.first_name = data["first_name"]
+            u.last_name = data["last_name"]
+            u.domain = data["domain"]
+            u.admin = data["admin"]
+            u.sudo = data["sudo"]
+            u.mail = [str(x) for x in data["mail_addresses"]]
             u.update(data.get("passwd"))
-        except Exception, e:
-            resp = jsonify(message="User couldn't be updated: %s" % str(e))
-            resp.status_code = 422
-            return resp
-        return jsonify(user=u.serialized, message="User %s updated successfully" % u.name)
+        except KeyError as e:
+            raise errors.InvalidConfigError(str(e))
+        except errors.InvalidConfigError as e:
+            return jsonify(errors={"msg": str(e)}), 422
+        return jsonify(user=u.serialized)
 
     @auth.required()
     def delete(self, id):
@@ -59,10 +69,8 @@ class UsersAPI(MethodView):
             abort(404)
         try:
             u.delete()
-        except Exception, e:
-            resp = jsonify(message="User couldn't be deleted: %s" % str(e))
-            resp.status_code = 422
-            return resp
+        except errors.InvalidConfigError as e:
+            return jsonify(errors={"msg": str(e)}), 422
         return Response(status=204)
 
 
@@ -72,22 +80,20 @@ class GroupsAPI(MethodView):
         g = groups.get(id)
         if id and not g:
             abort(404)
-        if type(g) == list:
-            return jsonify(groups=[x.serialized for x in g])
-        else:
+        if isinstance(g, groups.Group):
             return jsonify(group=g.serialized)
+        else:
+            return jsonify(groups=[x.serialized for x in g])
 
     @auth.required()
     def post(self):
         data = request.get_json()["group"]
-        g = groups.Group(name=data["name"], users=data["users"])
+        g = groups.Group(name=data["name"], users=data.get("users", []))
         try:
             g.add()
-        except Exception, e:
-            resp = jsonify(message="Group couldn't be added: %s" % str(e))
-            resp.status_code = 422
-            return resp
-        return jsonify(group=g.serialized, message="Group %s added successfully" % str(g.name))
+        except errors.InvalidConfigError as e:
+            return jsonify(errors={"msg": str(e)}), 422
+        return jsonify(group=g.serialized)
 
     @auth.required()
     def put(self, id):
@@ -98,11 +104,9 @@ class GroupsAPI(MethodView):
         g.users = [str(u) for u in data["users"]]
         try:
             g.update()
-        except Exception, e:
-            resp = jsonify(message="Group couldn't be updated: %s" % str(e))
-            resp.status_code = 422
-            return resp
-        return jsonify(group=g.serialized, message="Group %s updated successfully" % g.name)
+        except errors.InvalidConfigError as e:
+            return jsonify(errors={"msg": str(e)}), 422
+        return jsonify(group=g.serialized)
 
     @auth.required()
     def delete(self, id):
@@ -111,10 +115,8 @@ class GroupsAPI(MethodView):
             abort(404)
         try:
             g.delete()
-        except Exception, e:
-            resp = jsonify(message="Group couldn't be deleted: %s" % str(e))
-            resp.status_code = 422
-            return resp
+        except errors.InvalidConfigError as e:
+            return jsonify(errors={"msg": str(e)}), 422
         return Response(status=204)
 
 
@@ -124,10 +126,10 @@ class DomainsAPI(MethodView):
         d = domains.get(id)
         if id and not d:
             abort(404)
-        if type(d) == list:
-            return jsonify(domains=[x.serialized for x in d])
-        else:
+        if isinstance(d, domains.Domain):
             return jsonify(domain=d.serialized)
+        else:
+            return jsonify(domains=[x.serialized for x in d])
 
     @auth.required()
     def post(self):
@@ -135,11 +137,9 @@ class DomainsAPI(MethodView):
         d = domains.Domain(name=data["id"])
         try:
             d.add()
-        except Exception, e:
-            resp = jsonify(message="Domain couldn't be added: %s" % str(e))
-            resp.status_code = 422
-            return resp
-        return jsonify(domain=d.serialized, message="Domain %s added successfully" % str(d.name))
+        except errors.InvalidConfigError as e:
+            return jsonify(errors={"msg": str(e)}), 422
+        return jsonify(domain=d.serialized)
 
     @auth.required()
     def delete(self, id):
@@ -148,19 +148,17 @@ class DomainsAPI(MethodView):
             abort(404)
         try:
             d.remove()
-        except Exception, e:
-            resp = jsonify(message="Domain couldn't be deleted: %s" % str(e))
-            resp.status_code = 422
-            return resp
+        except errors.InvalidConfigError as e:
+            return jsonify(errors={"msg": str(e)}), 422
         return Response(status=204)
 
 
 users_view = UsersAPI.as_view('users_api')
 backend.add_url_rule('/api/system/users', defaults={'id': None},
-    view_func=users_view, methods=['GET',])
+                     view_func=users_view, methods=['GET',])
 backend.add_url_rule('/api/system/users', view_func=users_view, methods=['POST',])
 backend.add_url_rule('/api/system/users/<int:id>', view_func=users_view,
-    methods=['GET', 'PUT', 'DELETE'])
+                     methods=['GET', 'PUT', 'DELETE'])
 
 groups_view = GroupsAPI.as_view('groups_api')
 backend.add_url_rule('/api/system/groups', defaults={'id': None},
