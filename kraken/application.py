@@ -55,7 +55,8 @@ def run_daemon(environment, config_file, secrets_file,
                         app.logger)
     storage.connect()
     logger.info("Init", "arkOS Kraken {0}".format(arkos.version))
-    logger.debug("Init", "*** DEBUG MODE ***")
+    if environment in ["dev", "vagrant"]:
+        logger.debug("Init", "*** TEST MODE ***")
     logger.info("Init", "Using config file at {0}".format(config.filename))
     app.conf = config
 
