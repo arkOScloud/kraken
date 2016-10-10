@@ -52,13 +52,16 @@ def datetime():
 @auth.required()
 def shutdown():
     sysconfig.shutdown()
+    return jsonify(), 200
 
 @backend.route('/api/system/reload', methods=["POST",])
 @auth.required()
 def reload():
     sysconfig.reload()
+    return jsonify(), 200
 
 @backend.route('/api/system/reboot', methods=["POST",])
 @auth.required()
 def reboot():
     sysconfig.reboot()
+    return jsonify(), 200
