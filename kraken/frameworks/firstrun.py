@@ -72,7 +72,7 @@ def firstrun():
     if data.get("use_gpu_mem", None) \
             and config.get("enviro", "board").startswith("Raspberry"):
         f = filesystems.get("mmcblk0p1")
-        if not f.is_mounted():
+        if not f.is_mounted:
             f.mountpoint = "/boot"
             f.mount()
         cfgdata = []

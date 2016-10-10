@@ -43,15 +43,16 @@ def handle_pubsub(ps, sio):
         eventlet.sleep(0.1)
 
 
-def run_daemon(environment, log_level, config_file, secrets_file,
-               policies_file):
+def run_daemon(environment, config_file, secrets_file,
+               policies_file, debug):
     """Run the Kraken server daemon."""
-    app.debug = environment in ["dev", "vagrant"]
+    app.debug = debug or environment in ["dev", "vagrant"]
     app.config["SECRET_KEY"] = random_string()
 
     # Open and load configuraton
     config = arkos.init(config_file, secrets_file, policies_file,
-                        app.debug, app.logger)
+                        app.debug, environment in ["dev", "vagrant"],
+                        app.logger)
     logger.info("Init", "arkOS Kraken {0}".format(arkos.version))
     logger.debug("Init", "*** DEBUG MODE ***")
     logger.info("Init", "Using config file at {0}".format(config.filename))
@@ -63,8 +64,8 @@ def run_daemon(environment, log_level, config_file, secrets_file,
     hwstr = "Detected architecture/hardware: {0}, {1}"
     logger.info("Init", hwstr.format(arch, board))
     logger.info("Init", "Detected platform: {0}".format(platform))
-    config.set("enviro", "run", environment)
     logger.info("Init", "Environment: {0}".format(environment))
+    config.set("enviro", "run", environment)
 
     apihdlr = APIHandler()
     apihdlr.setLevel(logging.DEBUG if app.debug else logging.INFO)

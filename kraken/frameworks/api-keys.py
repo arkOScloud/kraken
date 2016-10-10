@@ -11,8 +11,8 @@ from flask import Response, Blueprint, jsonify, request
 from flask.views import MethodView
 
 from kraken import auth
-from kraken.utilities import genAPIKey
 from arkos import secrets
+from arkos.utilities import genAPIKey
 
 backend = Blueprint("api_keys", __name__)
 
