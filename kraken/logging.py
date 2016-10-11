@@ -34,6 +34,35 @@ class APIHandler(logging.Handler):
         pipe.execute()
 
 
+class FileFormatter(logging.Formatter):
+    def format(self, record):
+        if type(record.msg) in [str, bytes]:
+            id = random_string(16)
+            data = {"id": id, "message_id": id, "title": None,
+                    "message": record.msg, "comp": "Unknown", "cls": "runtime",
+                    "complete": True}
+        else:
+            data = record.msg.copy()
+        levelname = "CRITICAL"
+        logtime = datetime.datetime.fromtimestamp(record.created)
+        logtime = logtime.strftime("%Y-%m-%d %H:%M:%S")
+        logtime = "%s,%03d" % (logtime, record.msecs)
+        if record.levelname == "DEBUG":
+            levelname = "DEBUG  "
+        if record.levelname == "INFO":
+            levelname = "INFO   "
+        if record.levelname == "SUCCESS":
+            levelname = "SUCCESS"
+        if record.levelname == "WARNING":
+            levelname = "WARN   "
+        if record.levelname == "ERROR":
+            levelname = "ERROR  "
+        data.update({"cls": data["cls"].upper()[0], "levelname": levelname,
+                     "asctime": logtime})
+        result = self._fmt.format(**data)
+        return result
+
+
 class WSGILogWrapper:
     def info(self, message):
         logger.debug("WSGI", message)

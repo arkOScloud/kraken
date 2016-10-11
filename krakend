@@ -92,9 +92,7 @@ if __name__ == '__main__':
             environment, config_file, secrets_file, policy_file, debug
         )
     else:
-        krakend = KrakenDaemon(
-            '/var/run/kraken.pid', stdout='/var/log/kraken.log'
-        )
+        krakend = KrakenDaemon('/var/run/kraken.pid')
         krakend.environment = environment
         krakend.config_file = config_file
         krakend.secrets_file = secrets_file

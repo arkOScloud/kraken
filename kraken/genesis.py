@@ -64,7 +64,7 @@ def verify_genesis():
         vpath = os.path.dirname(os.path.realpath(__file__))
         vpath = os.path.abspath(os.path.join(vpath, '../../genesis/dist'))
     else:
-        vpath = '/var/lib/arkos/genesis/dist'
+        vpath = '/var/lib/arkos/genesis'
     if not os.path.exists(vpath):
         return False
     return True

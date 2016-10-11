@@ -11,6 +11,8 @@ import eventlet
 import logging
 import ssl
 
+from logging.handlers import RotatingFileHandler
+
 from kraken import auth, genesis
 
 import arkos
@@ -18,7 +20,7 @@ from arkos import logger
 from arkos.utilities import random_string, detect_platform, NotificationFilter
 
 from kraken.redis_storage import storage
-from kraken.logging import APIHandler, WSGILogWrapper
+from kraken.logging import APIHandler, FileFormatter, WSGILogWrapper
 from kraken.utilities import add_cors_to_response, make_json_error
 from kraken.framework import register_frameworks
 
@@ -74,6 +76,15 @@ def run_daemon(environment, config_file, secrets_file,
     apihdlr.addFilter(NotificationFilter())
     logger.logger.addHandler(apihdlr)
 
+    if environment not in ["dev", "vagrant"]:
+        filehdlr = RotatingFileHandler(
+            '/var/log/kraken.log', maxBytes=2097152, backupCount=5
+        )
+        st = "{asctime} [{cls}] [{levelname}] {comp}: {message}"
+        filehdlr.setLevel(logging.DEBUG if app.debug else logging.INFO)
+        filehdlr.setFormatter(FileFormatter(st))
+        logger.logger.addHandler(filehdlr)
+
     for code in list(default_exceptions.keys()):
         app.register_error_handler(code, make_json_error)
 
@@ -88,9 +99,8 @@ def run_daemon(environment, config_file, secrets_file,
 
     logger.info("Init", "Initializing Genesis (if present)...")
     app.register_blueprint(genesis.backend)
-    try:
-        genesis.backend.verify_genesis()
-    except:
+    hasgen = genesis.verify_genesis()
+    if not hasgen:
         errmsg = ("A compiled distribution of Genesis was not found. "
                   "Kraken will finish loading but you may not be able to "
                   "access the Web interface.")
@@ -112,7 +122,8 @@ def run_daemon(environment, config_file, secrets_file,
                 eventlet_socket, certfile=config.get("genesis", "cert_file"),
                 keyfile=config.get("genesis", "cert_key"),
                 ssl_version=ssl.PROTOCOL_TLSv1_2, server_side=True)
-        eventlet.wsgi.server(eventlet_socket, app, log=WSGILogWrapper(),
+        eventlet.wsgi.server(
+            eventlet_socket, app, log=WSGILogWrapper(),
             log_format=('%(client_ip)s - "%(request_line)s" %(status_code)s '
                         '%(body_length)s %(wall_seconds).6f'))
     except KeyboardInterrupt:
