@@ -56,6 +56,21 @@ def run_daemon(environment, config_file, secrets_file,
                         app.debug, environment in ["dev", "vagrant"],
                         app.logger)
     storage.connect()
+
+    if environment not in ["dev", "vagrant"]:
+        filehdlr = RotatingFileHandler(
+            '/var/log/kraken.log', maxBytes=2097152, backupCount=5
+        )
+        st = "{asctime} [{cls}] [{levelname}] {comp}: {message}"
+        filehdlr.setLevel(logging.DEBUG if app.debug else logging.INFO)
+        filehdlr.setFormatter(FileFormatter(st))
+        logger.logger.addHandler(filehdlr)
+
+    apihdlr = APIHandler()
+    apihdlr.setLevel(logging.DEBUG if app.debug else logging.INFO)
+    apihdlr.addFilter(NotificationFilter())
+    logger.logger.addHandler(apihdlr)
+
     logger.info("Init", "arkOS Kraken {0}".format(arkos.version))
     if environment in ["dev", "vagrant"]:
         logger.debug("Init", "*** TEST MODE ***")
@@ -70,20 +85,6 @@ def run_daemon(environment, config_file, secrets_file,
     logger.info("Init", "Detected platform: {0}".format(platform))
     logger.info("Init", "Environment: {0}".format(environment))
     config.set("enviro", "run", environment)
-
-    apihdlr = APIHandler()
-    apihdlr.setLevel(logging.DEBUG if app.debug else logging.INFO)
-    apihdlr.addFilter(NotificationFilter())
-    logger.logger.addHandler(apihdlr)
-
-    if environment not in ["dev", "vagrant"]:
-        filehdlr = RotatingFileHandler(
-            '/var/log/kraken.log', maxBytes=2097152, backupCount=5
-        )
-        st = "{asctime} [{cls}] [{levelname}] {comp}: {message}"
-        filehdlr.setLevel(logging.DEBUG if app.debug else logging.INFO)
-        filehdlr.setFormatter(FileFormatter(st))
-        logger.logger.addHandler(filehdlr)
 
     for code in list(default_exceptions.keys()):
         app.register_error_handler(code, make_json_error)
