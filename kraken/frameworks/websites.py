@@ -69,14 +69,23 @@ class WebsitesAPI(MethodView):
         elif data.get("operation") == "disable_ssl":
             site.cert.unassign("website", site.id)
         elif data.get("operation") == "update":
-            site.update()
+            id = as_job(self._put, site)
+            return job_response(
+                id,
+                data={"website": site.serialized.update({"is_ready": False})})
         else:
             site.domain = data["domain"]
             site.port = data["port"]
             site.edit(data.get("new_name"))
-        push_record("website", site.serialized)
-        remove_record("website", id)
+        if data.get("new_name"):
+            remove_record("website", id)
+            push_record("website", site.serialized)
         return jsonify(website=site.serialized)
+
+    def _put(self, job, site):
+        nthread = NotificationThread(id=job.id)
+        site.update(nthread=nthread)
+        push_record("website", site.serialized)
 
     @auth.required()
     def delete(self, id):
