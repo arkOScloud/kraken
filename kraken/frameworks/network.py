@@ -23,7 +23,7 @@ class NetworksAPI(MethodView):
         nets = network.get_connections(id)
         if id and not nets:
             abort(404)
-        if isinstance(nets, networks.Connection):
+        if isinstance(nets, network.Connection):
             return jsonify(network=nets.serialized)
         else:
             return jsonify(networks=[x.serialized for x in nets])
