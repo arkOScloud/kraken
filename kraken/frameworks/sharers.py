@@ -38,6 +38,8 @@ class SharesAPI(MethodView):
     @auth.required()
     def post(self):
         data = request.get_json()["share"]
+        if not data.get("share_type"):
+            abort(422)
         manager = sharers.get_sharers(data["share_type"])
         try:
             share = manager.add_share(
