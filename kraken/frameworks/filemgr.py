@@ -217,6 +217,8 @@ def download(id):
 
 
 def as_dict(path, content=False):
+    if not isinstance(path, str):
+        path = path.decode()
     name = os.path.basename(path)
     data = {"id": path_to_b64(path), "name": name,
             "path": path, "folder": False, "hidden": name.startswith(".")}
