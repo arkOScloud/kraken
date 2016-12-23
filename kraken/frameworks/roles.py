@@ -37,7 +37,7 @@ class UsersAPI(MethodView):
                            admin=data["admin"], sudo=data["sudo"])
             u.add(data["passwd"])
         except KeyError as e:
-            raise errors.InvalidConfigError(str(e))
+            raise errors.InvalidConfigError(str(e) if e else "Value not found")
         except errors.InvalidConfigError as e:
             return jsonify(errors={"msg": str(e)}), 422
         return jsonify(user=u.serialized)
