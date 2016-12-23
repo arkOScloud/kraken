@@ -58,14 +58,17 @@ class FileManagerAPI(MethodView):
             return jsonify(files=results)
         else:
             data = request.get_json()["file"]
+            file_path = os.path.join(path, data["name"])
             if not os.path.exists(path):
                 abort(404)
             if not os.path.isdir(path):
                 return jsonify(errors={"msg": "Can only create into folders"}), 422
             if data["folder"]:
-                os.makedirs(os.path.join(path, data["name"]))
+                os.makedirs(file_path)
             else:
-                with open(os.path.join(path, data["name"]), 'w') as f:
+                if os.path.exists(file_path) and not os.path.isfile(file_path):
+                    return jsonify(errors={"msg": "Not a regular file"}), 422
+                with open(file_path, 'w') as f:
                     f.write("")
             return jsonify(file=as_dict(os.path.join(path, data["name"])))
 
