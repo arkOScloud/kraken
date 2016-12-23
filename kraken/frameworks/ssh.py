@@ -32,10 +32,19 @@ class SSHKeysAPI(MethodView):
                 y = y.rstrip("\n")
                 if not y.split():
                     continue
-                try:
-                    key = {"id": user+"-"+y.split()[1][:10], "user": user, "key": y}
-                except IndexError:
-                    continue
+                if len(y.split()) == 3:
+                    key = {
+                        "id": user+"-"+y.split()[-1],
+                        "user": user, "key": y
+                    }
+                else:
+                    try:
+                        key = {
+                            "id": user+"-"+y.split()[1][:10],
+                            "user": user, "key": y
+                        }
+                    except IndexError:
+                        continue
                 if id and key["id"] == id:
                     return jsonify(ssh_key=key)
                 keys.append(key)
@@ -59,7 +68,10 @@ class SSHKeysAPI(MethodView):
                 f.write(data["key"])
                 if not data["key"].endswith("\n"):
                     f.write("\n")
-            key["id"] = key["user"]+"-"+data["key"].split()[1][:10]
+            if len(data["key"].split()) == 3:
+                key["id"] = key["user"]+"-"+data["key"].split()[-1]
+            else:
+                key["id"] = key["user"]+"-"+data["key"].split()[1][:10]
             os.chown(akeys_path, user.uid, 100)
             os.chmod(akeys_path, 0o600)
         else:
@@ -71,19 +83,24 @@ class SSHKeysAPI(MethodView):
                 if not data["key"].endswith("\n"):
                     f.write("\n")
                 f.seek(0)
-                key["id"] = key["user"]+"-"+data["key"].split()[1][:10]
+                if len(data["key"].split()) == 3:
+                    key["id"] = key["user"]+"-"+data["key"].split()[-1]
+                else:
+                    key["id"] = key["user"]+"-"+data["key"].split()[1][:10]
         return jsonify(ssh_key=key)
 
     @auth.required()
     def delete(self, id):
-        user, ldat = id.rsplit("-", 1)
+        user, ldat = id.split("-", 1)
         akeys_path = "/home/{0}/.ssh/authorized_keys".format(user)
         if not glob.glob(akeys_path):
             abort(404)
         with open(akeys_path, "r") as f:
             data = []
             for x in f.readlines():
-                if x.split() and ldat == x.split()[1][:10]:
+                if x.split() and (
+                        ldat == x.split()[1][:10] or ldat == x.split()[-1]
+                        ):
                     continue
                 data.append(x)
         with open(akeys_path, "w") as f:

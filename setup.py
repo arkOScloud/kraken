@@ -14,7 +14,7 @@ install_requires = [
 
 setup(
     name='arkos-kraken',
-    version='0.8.1',
+    version='0.8.3',
     install_requires=install_requires,
     description='arkOS REST API',
     author='CitizenWeb',
