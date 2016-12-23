@@ -103,9 +103,8 @@ class FileManagerAPI(MethodView):
                 if data["group"] == "root":
                     gid = 0
                 if u and g:
-                    uid, gid = u.uid, g.gid
-                if uid == None or gid == None:
-                    return jsonify(errors={"msg": "Invalid user/group specification"}), 422
+                    uid = u.uid if u.uid is not None else -1
+                    gid = g.gid if g.gid is not None else -1
                 if data["folder"]:
                     os.chown(data["path"], uid, gid)
                     for r, d, f in os.walk(data["path"]):
@@ -114,7 +113,7 @@ class FileManagerAPI(MethodView):
                         for x in f:
                             os.chown(os.path.join(r, x), uid, gid)
                 else:
-                    os.chown(data["path"], u.uid, g.gid)
+                    os.chown(data["path"], uid, gid)
             if data["perms"]["oct"] != orig["perms"]["oct"]:
                 if data["folder"]:
                     os.chmod(data["path"], int(data["perms"]["oct"], 8))
