@@ -1,8 +1,5 @@
 # arkOS Kraken
-
-| **Production** (`master`)   | **Development** (`develop`) |
-| -------- | -------- |
-| ![Build Status: Master](https://git.coderouge.co/arkOS/kraken/badges/master/build.svg)   | ![Build Status: Development](https://git.coderouge.co/arkOS/kraken/badges/develop/build.svg)  
+![](https://travis-ci.org/arkOScloud/kraken.svg?branch=master) 
 
 Kraken is the REST API backend for Genesis, powered by Flask. It exposes certain parts of the arkOS core system management libraries over HTTP for clients to access.
 

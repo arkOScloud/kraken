@@ -1,0 +1,7 @@
+language: python
+python:
+  - "3.4"  # Debian 8 (Jessie) and Ubuntu 14.04 (Trusty)
+  - "3.5"  # Debian 9 (Sid) and Ubuntu 16.04 (Xenial)
+  - "3.6"  # Arch Linux
+install: "pip install -r requirements.txt"
+script: python setup.py test
